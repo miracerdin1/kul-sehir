@@ -14,6 +14,19 @@ SWAT_URL = "https://pub-2534e921bf9c4314addcd4d8a6e98b7b.r2.dev/avatars/mixamo/g
 ANIMATION_ROOT = "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/"
 
 
+# (source file, clip name in Godot). Natural speeds live in godot/scripts/survivor.gd.
+CLIPS = (
+    ("Idle", "Idle"),
+    ("Walk", "Walk"),
+    ("Slow_Run", "Run"),
+    ("Sprint", "Sprint"),
+    ("Crouch_Idle", "CrouchIdle"),
+    ("Crouch_Walking", "CrouchWalk"),
+    ("Crawling", "Crawl"),
+    ("Falling", "Fall"),
+)
+
+
 def fetch(url, path):
     if not path.exists():
         with urllib.request.urlopen(url, timeout=90) as response:
@@ -145,7 +158,9 @@ def main():
     target, binary = read_glb(swat)
     target["animations"] = []
     sources = [{"url": SWAT_URL, "sha256": sha256(swat.read_bytes()).hexdigest()}]
-    for source_name, name in (("Idle", "Idle"), ("Walking", "Walk"), ("Running", "Run")):
+    # The animation library's file names are not always accurate (its "Running.glb"
+    # keeps both feet planted), so each clip below was checked by its planted-foot speed.
+    for source_name, name in CLIPS:
         url = ANIMATION_ROOT + source_name + ".glb"
         path = fetch(url, CACHE / (source_name.lower() + ".glb"))
         source, source_binary = read_glb(path)
@@ -154,13 +169,13 @@ def main():
     output = ROOT / "godot" / "assets" / "characters" / "survivor.glb"
     output.parent.mkdir(parents=True, exist_ok=True)
     write_glb(target, binary, output)
-    credits = {"character": "SWAT by Adobe Mixamo", "animations": "Idle / Walking / Running by Adobe Mixamo",
+    credits = {"character": "SWAT by Adobe Mixamo", "animations": " / ".join(source for source, _ in CLIPS) + " by Adobe Mixamo",
                "sources": sources, "license": "Mixamo embedded project use; not CC0; no standalone redistribution",
                "terms": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
                "modifications": "Locomotion retargeted to SWAT rest skeleton, horizontal root motion removed.",
                "output_sha256": sha256(output.read_bytes()).hexdigest()}
     output.with_suffix(".credits.json").write_text(json.dumps(credits, indent=2), encoding="utf-8")
-    print("SWAT survivor ready, with Idle / Walk / Run.")
+    print("SWAT survivor ready, with " + " / ".join(name for _, name in CLIPS) + ".")
 
 
 if __name__ == "__main__":

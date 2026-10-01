@@ -48,6 +48,7 @@ func run(game: Node3D) -> void:
 	check(game.player.position.y > 0.3, "Jump leaves the ground")
 	await frames(game, 70)
 	check(game.player.is_on_floor(), "Jump lands on collision")
+	await check_motion(game)
 	game.player.position = Vector3(-6.1, 0.3, -2.0)
 	game.player.velocity = Vector3.ZERO
 	await frames(game, 5)
@@ -103,6 +104,76 @@ func run(game: Node3D) -> void:
 	await frames(game, 8)
 	print("QA RESULT: %d failures" % failures.size())
 	game.get_tree().quit(0 if failures.is_empty() else 1)
+
+
+func hold(game: Node, actions: Array, count: int) -> void:
+	for action: String in actions:
+		Input.action_press(action)
+	await frames(game, count)
+	for action: String in actions:
+		Input.action_release(action)
+
+
+func press(game: Node, action: String) -> void:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = true
+	game.player._unhandled_input(event)
+	await frames(game, 2)
+
+
+func check_motion(game: Node3D) -> void:
+	var player = game.player
+	player.position = Vector3(0, 0.2, 15)
+	player.velocity = Vector3.ZERO
+	player.yaw = 0.0
+	player.stamina = 100.0
+	await frames(game, 10)
+	check(player.motion == "Idle", "Standing still plays Idle")
+	await hold(game, ["move_forward"], 40)
+	check(player.motion == "Run", "Default movement plays Run, got " + player.motion)
+	check(absf(player.animation.speed_scale - player.RUN_SPEED / player.CLIP_SPEED["Run"]) < 0.05, "Run clip pace matches ground speed")
+	await hold(game, ["move_forward", "walk"], 40)
+	check(player.motion == "Walk", "Walk key plays Walk, got " + player.motion)
+	await hold(game, ["move_forward", "sprint"], 40)
+	check(player.motion == "Sprint", "Sprint key plays Sprint, got " + player.motion)
+	await frames(game, 30)
+	check(player.motion == "Idle", "Releasing keys returns to Idle")
+	await press(game, "crouch")
+	check(player.stance == "crouch" and player.capsule.height < 1.3, "C crouches and lowers the capsule")
+	await hold(game, ["move_forward"], 30)
+	check(player.motion == "CrouchWalk", "Crouched movement plays CrouchWalk, got " + player.motion)
+	check(Vector2(player.velocity.x, player.velocity.z).length() <= player.CROUCH_SPEED + 0.01, "Crouching slows movement")
+	await press(game, "prone")
+	await hold(game, ["move_forward"], 30)
+	check(player.stance == "prone" and player.motion == "Crawl", "Z goes prone and crawls")
+	await frames(game, 40)
+	check(player.animation.speed_scale == 0.0, "Lying still holds the crawl pose")
+	var roof := StaticBody3D.new()
+	var shape := CollisionShape3D.new()
+	var box := BoxShape3D.new()
+	box.size = Vector3(2, 0.2, 2)
+	shape.shape = box
+	roof.add_child(shape)
+	game.add_child(roof)
+	roof.global_position = player.global_position + Vector3(0, 0.95, 0)
+	await frames(game, 2)
+	await press(game, "prone")
+	check(player.stance == "prone", "Cannot stand up under a low ceiling")
+	roof.queue_free()
+	await frames(game, 2)
+	await press(game, "prone")
+	check(player.stance == "stand" and player.capsule.height > 1.7, "Z again stands back up")
+	await press(game, "crouch")
+	await hold(game, ["sprint", "move_forward"], 10)
+	check(player.stance == "stand", "Sprinting from a crouch stands up")
+	await frames(game, 30)
+	Input.action_press("jump")
+	await frames(game, 20)
+	Input.action_release("jump")
+	check(player.motion == "Fall", "Airborne plays Fall, got " + player.motion)
+	await frames(game, 60)
+	check(player.is_on_floor() and player.motion == "Idle", "Landing returns to Idle")
 
 
 func save_frame(game: Node, path: String) -> void:
