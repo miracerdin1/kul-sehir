@@ -14,7 +14,10 @@ const JUMP_STAMINA := 6.0
 # Ground speed (m/s) at which each locomotion clip plays at 1x, measured from the
 # planted foot of the Mixamo source clip.
 const CLIP_SPEED := {"Walk": 1.65, "Run": 3.0, "Sprint": 5.9, "CrouchWalk": 1.22, "Crawl": 0.45}
-const LOOPING := ["Idle", "Walk", "Run", "Sprint", "CrouchIdle", "CrouchWalk", "Crawl", "Fall"]
+const LOOPING := ["Idle", "Walk", "Run", "Sprint", "CrouchIdle", "CrouchWalk", "Crawl"]
+# JumpAir runs from take-off to touch-down; it is stretched over the real time in the air.
+const JUMP_AIR_TIME := 2.0 * JUMP_VELOCITY / GRAVITY
+const LAND_TIME := 0.35
 # Capsule height and camera pivot height for each stance.
 const STANCE_HEIGHT := {"stand": 1.75, "crouch": 1.2, "prone": 0.6}
 const STANCE_CAMERA := {"stand": 1.5, "crouch": 1.05, "prone": 0.6}
@@ -40,6 +43,9 @@ var footstep: AudioStreamPlayer3D
 var exhausted := false
 var sprinting := false
 var air_time := 0.0
+var jumped := false
+var land_time := 0.0
+var action_time := 0.0
 var still_time := 0.0
 var motion := ""
 
@@ -150,6 +156,10 @@ func _physics_process(delta: float) -> void:
 	if not active:
 		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
+	# A one-off action such as picking something up roots the character in place.
+	action_time = maxf(0.0, action_time - delta)
+	if action_time > 0.0:
+		input = Vector2.ZERO
 	var direction := Basis(Vector3.UP, yaw) * Vector3(input.x, 0.0, input.y)
 	var moving := direction.length_squared() > 0.01
 	if stamina <= 0.5:
@@ -166,19 +176,31 @@ func _physics_process(delta: float) -> void:
 	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 14.0)
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
-	if Input.is_action_just_pressed("jump") and is_on_floor():
+	if Input.is_action_just_pressed("jump") and is_on_floor() and action_time <= 0.0:
 		if stance != "stand":
 			set_stance("stand")
 		elif stamina >= JUMP_STAMINA:
 			velocity.y = JUMP_VELOCITY
 			stamina -= JUMP_STAMINA
+			jumped = true
+			land_time = 0.0
+			play_motion("JumpAir", 0.08)
 	move_and_slide()
 	var ground_speed := Vector2(get_real_velocity().x, get_real_velocity().z).length()
 	var stamina_rate := -6.5 if sprinting and ground_speed > 0.5 else (10.0 if exhausted else (13.0 if ground_speed > 0.2 else 18.0))
 	stamina = clampf(stamina + stamina_rate * delta, 0.0, 100.0)
 	if moving:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(direction.x, direction.z), delta * 12.0)
-	air_time = 0.0 if is_on_floor() else air_time + delta
+	if is_on_floor():
+		# Only a real fall or jump earns a landing; stepping off a kerb does not.
+		if (jumped or air_time > 0.3) and ground_speed < 1.2 and velocity.y <= 0.0:
+			land_time = LAND_TIME
+		if velocity.y <= 0.0:
+			jumped = false
+		air_time = 0.0
+	else:
+		air_time += delta
+	land_time = maxf(0.0, land_time - delta)
 	if is_on_floor() and ground_speed > 0.2:
 		step_distance += ground_speed * delta
 		if step_distance > stride_length():
@@ -223,9 +245,13 @@ func stride_length() -> float:
 func update_animation(ground_speed: float, delta: float) -> void:
 	if not animation:
 		return
+	if action_time > 0.0:
+		return
 	var next := "Idle"
-	if air_time > 0.15:
-		next = "Fall"
+	if jumped or air_time > 0.2:
+		next = "JumpAir"
+	elif land_time > 0.0 and ground_speed < 1.2:
+		next = "JumpLand"
 	elif stance == "prone":
 		next = "Crawl"
 	elif stance == "crouch":
@@ -238,7 +264,17 @@ func update_animation(ground_speed: float, delta: float) -> void:
 		else:
 			next = "Walk"
 	still_time = still_time + delta if ground_speed <= 0.2 else 0.0
-	play_motion(next)
+	if next == "JumpAir" and motion != "JumpAir":
+		# Walked off a ledge: join the jump clip on its way down.
+		play_motion(next, 0.15)
+		animation.seek(animation.current_animation_length * 0.55, true)
+	play_motion(next, 0.1 if motion in ["JumpAir", "JumpLand"] else 0.25)
+	if next == "JumpAir":
+		animation.speed_scale = animation.current_animation_length / JUMP_AIR_TIME
+		return
+	if next == "JumpLand":
+		animation.speed_scale = animation.current_animation_length / LAND_TIME
+		return
 	if CLIP_SPEED.has(next):
 		var clip_rate := clampf(ground_speed / CLIP_SPEED[next], 0.6, 1.5)
 		# Lying still holds the crawl pose once the cross-fade has finished.
@@ -268,11 +304,28 @@ func clip_name(clip: String) -> String:
 	return clip.get_slice("/", clip.get_slice_count("/") - 1)
 
 
-func play_motion(next: String) -> void:
+# Plays a one-off clip over the given time while movement waits.
+func play_action(next: String, duration: float) -> void:
+	if not animation:
+		return
+	action_time = duration
+	velocity.x = 0.0
+	velocity.z = 0.0
+	motion = ""
+	play_motion(next, 0.15)
+	if motion == next:
+		animation.speed_scale = animation.current_animation_length / duration
+
+
+func busy() -> bool:
+	return action_time > 0.0
+
+
+func play_motion(next: String, blend := 0.25) -> void:
 	if not animation or next == motion:
 		return
 	for clip in animation.get_animation_list():
 		if clip_name(clip).to_lower() == next.to_lower():
-			animation.play(clip, 0.25)
+			animation.play(clip, blend)
 			motion = next
 			return

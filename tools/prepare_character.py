@@ -14,16 +14,22 @@ SWAT_URL = "https://pub-2534e921bf9c4314addcd4d8a6e98b7b.r2.dev/avatars/mixamo/g
 ANIMATION_ROOT = "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/"
 
 
-# (source file, clip name in Godot). Natural speeds live in godot/scripts/survivor.gd.
+# (source file, clip name in Godot, options). Natural speeds live in godot/scripts/survivor.gd.
+# Options: start/end in seconds cut a slice out of a longer clip, pingpong plays the slice
+# forward then back, no_rise drops the hips' upward motion that physics already supplies.
 CLIPS = (
-    ("Idle", "Idle"),
-    ("Walk", "Walk"),
-    ("Slow_Run", "Run"),
-    ("Sprint", "Sprint"),
-    ("Crouch_Idle", "CrouchIdle"),
-    ("Crouch_Walking", "CrouchWalk"),
-    ("Crawling", "Crawl"),
-    ("Falling", "Fall"),
+    ("Idle", "Idle", {}),
+    ("Walk", "Walk", {}),
+    ("Slow_Run", "Run", {}),
+    ("Sprint", "Sprint", {}),
+    ("Crouch_Idle", "CrouchIdle", {}),
+    ("Crouch_Walking", "CrouchWalk", {}),
+    ("Crawling", "Crawl", {}),
+    # Standing jump: feet leave the ground at 0.80 s and touch down at 1.30 s.
+    ("Jump", "JumpAir", {"start": 0.80, "end": 1.30, "no_rise": True}),
+    ("Jump", "JumpLand", {"start": 1.30, "end": 1.75, "no_rise": True}),
+    # Kneel until the right hand is about 0.3 m above the ground, then rise again.
+    ("Kneeling_Down", "PickUp", {"start": 1.05, "end": 2.25, "pingpong": True}),
 )
 
 
@@ -102,7 +108,35 @@ def append_accessor(document, binary, values, kind):
     return index
 
 
-def retarget(target, binary, source, source_binary, name):
+def sample_at(times, values, at):
+    """Linear sample (normalised for quaternions) of a channel at a given time."""
+    if at <= times[0][0]:
+        return values[0]
+    for index in range(1, len(times)):
+        if at <= times[index][0]:
+            t0, t1 = times[index - 1][0], times[index][0]
+            mix = (at - t0) / (t1 - t0) if t1 > t0 else 0.0
+            a, b = values[index - 1], values[index]
+            if len(a) == 4 and sum(x * y for x, y in zip(a, b)) < 0.0:
+                b = tuple(-x for x in b)
+            value = tuple(x + (y - x) * mix for x, y in zip(a, b))
+            return normalize(value) if len(value) == 4 else value
+    return values[-1]
+
+
+def trim(times, values, start, end, pingpong):
+    """Resample the slice between start and end (seconds) at 30 fps, restarting at zero.
+    With pingpong the slice plays forward and then backward, e.g. kneel down and up."""
+    count = max(2, round((end - start) * 30) + 1)
+    rows = [((end - start) * k / (count - 1), sample_at(times, values, start + (end - start) * k / (count - 1)))
+            for k in range(count)]
+    if pingpong:
+        last = rows[-1][0]
+        rows += [(2 * last - t, v) for t, v in reversed(rows[:-1])]
+    return [(t,) for t, _ in rows], [v for _, v in rows]
+
+
+def retarget(target, binary, source, source_binary, name, start=None, end=None, pingpong=False, no_rise=False):
     target_parents, target_world = rotation_globals(target)
     source_parents, source_world = rotation_globals(source)
     targets = {node.get("name"): index for index, node in enumerate(target["nodes"])}
@@ -131,7 +165,12 @@ def retarget(target, binary, source, source_binary, name):
             source_rest = source["nodes"][source_index]["translation"]
             scale = rest[1] / source_rest[1]
             values = [(rest[0], rest[1] + (value[1] - source_rest[1]) * scale, rest[2]) for value in values]
+            if no_rise:
+                # Physics already lifts the body during a jump; keep only the crouch.
+                values = [(x, min(y, rest[1]), z) for x, y, z in values]
         times = samples(source, source_binary, sampler["input"])
+        if start is not None:
+            times, values = trim(times, values, start, end, pingpong)
         animation["channels"].append({"sampler": len(animation["samplers"]), "target": {"node": target_index, "path": kind}})
         animation["samplers"].append({
             "input": append_accessor(target, binary, times, "SCALAR"),
@@ -160,22 +199,23 @@ def main():
     sources = [{"url": SWAT_URL, "sha256": sha256(swat.read_bytes()).hexdigest()}]
     # The animation library's file names are not always accurate (its "Running.glb"
     # keeps both feet planted), so each clip below was checked by its planted-foot speed.
-    for source_name, name in CLIPS:
+    for source_name, name, options in CLIPS:
         url = ANIMATION_ROOT + source_name + ".glb"
         path = fetch(url, CACHE / (source_name.lower() + ".glb"))
         source, source_binary = read_glb(path)
-        target["animations"].append(retarget(target, binary, source, source_binary, name))
-        sources.append({"url": url, "sha256": sha256(path.read_bytes()).hexdigest()})
+        target["animations"].append(retarget(target, binary, source, source_binary, name, **options))
+        if not any(entry["url"] == url for entry in sources):
+            sources.append({"url": url, "sha256": sha256(path.read_bytes()).hexdigest()})
     output = ROOT / "godot" / "assets" / "characters" / "survivor.glb"
     output.parent.mkdir(parents=True, exist_ok=True)
     write_glb(target, binary, output)
-    credits = {"character": "SWAT by Adobe Mixamo", "animations": " / ".join(source for source, _ in CLIPS) + " by Adobe Mixamo",
+    credits = {"character": "SWAT by Adobe Mixamo", "animations": " / ".join(dict.fromkeys(source for source, _, _ in CLIPS)) + " by Adobe Mixamo",
                "sources": sources, "license": "Mixamo embedded project use; not CC0; no standalone redistribution",
                "terms": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
                "modifications": "Locomotion retargeted to SWAT rest skeleton, horizontal root motion removed.",
                "output_sha256": sha256(output.read_bytes()).hexdigest()}
     output.with_suffix(".credits.json").write_text(json.dumps(credits, indent=2), encoding="utf-8")
-    print("SWAT survivor ready, with " + " / ".join(name for _, name in CLIPS) + ".")
+    print("SWAT survivor ready, with " + " / ".join(name for _, name, _ in CLIPS) + ".")
 
 
 if __name__ == "__main__":

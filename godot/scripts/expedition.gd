@@ -4,6 +4,7 @@ const Street = preload("res://scripts/street.gd")
 const Survivor = preload("res://scripts/survivor.gd")
 const Hud = preload("res://scripts/hud.gd")
 const InputBindings = preload("res://scripts/input_bindings.gd")
+const PICKUP_TIME := 1.3
 
 var street: Node3D
 var player: CharacterBody3D
@@ -159,14 +160,26 @@ func has_line_of_sight(target: Vector3) -> bool:
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
+# The survivor turns to the item, kneels, and the item leaves the ground when the
+# hand reaches it, halfway through the clip.
+func pick_up(node: Node3D) -> void:
+	var to_item := node.global_position - player.global_position
+	player.visual.rotation.y = atan2(to_item.x, to_item.z)
+	player.play_action("PickUp", PICKUP_TIME)
+	await get_tree().create_timer(PICKUP_TIME * 0.5).timeout
+	node.hide()
+
+
 func interact() -> void:
 	find_interaction()
 	if focused_pickup >= 0:
+		if player.busy():
+			return
 		var item: Dictionary = street.pickups[focused_pickup]
 		item.collected = true
-		item.node.hide()
 		inventory.append(item.label)
 		hud.notify(item.label + " çantaya eklendi.")
+		pick_up(item.node)
 		find_interaction()
 		return
 	if not can_use_stove:
