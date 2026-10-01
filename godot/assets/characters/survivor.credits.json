@@ -1,6 +1,6 @@
 {
   "character": "SWAT by Adobe Mixamo",
-  "animations": "Idle / Walking / Running by Adobe Mixamo",
+  "animations": "Idle / Walk / Slow_Run / Sprint / Crouch_Idle / Crouch_Walking / Crawling / Falling by Adobe Mixamo",
   "sources": [
     {
       "url": "https://pub-2534e921bf9c4314addcd4d8a6e98b7b.r2.dev/avatars/mixamo/glb/swat.glb",
@@ -11,16 +11,36 @@
       "sha256": "60b92ba7ac83bf1d6901ca5c8c4b52688cfbf94048dd8beb91112ae9fc1d8c7c"
     },
     {
-      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Walking.glb",
-      "sha256": "f9027219ebf895375f0284e02c66f4e34601ab4bf299d81447a65572c873c911"
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Walk.glb",
+      "sha256": "1a6d7e7f84afb9ea189633b6ffcae2560e3dd4464835f8754ac35dc00d8c32d9"
     },
     {
-      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Running.glb",
-      "sha256": "4646e39f0b21fa1112ed93b61f02e5e4ea6b074f567e7870673a3ff49b35a8e6"
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Slow_Run.glb",
+      "sha256": "eb2ffcf3a129b89fd50b858b4a1124c704c22fa90ff80d17f9e253301affa736"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Sprint.glb",
+      "sha256": "b137982f4f3b08dc3158afde8f8e0955da84f997fd35eb93361e251f93299dfc"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Crouch_Idle.glb",
+      "sha256": "11b1fcd27581ffb8710be2bd77f8bbfe1fc5b16e6fd1ce5cf0a2fc6be42ffaf2"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Crouch_Walking.glb",
+      "sha256": "4cbafad993b65b466832b4a083243a99660ad79d73775b23b218c1d244f01796"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Crawling.glb",
+      "sha256": "f6f60e66ff7a1ff5b1d6ff9d40e0ee323d6ec3ac9ab41c41393e9169e9005538"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Falling.glb",
+      "sha256": "85abfb93f29031fce7a35bab910b7a8dc9a4002f891a7ce915a1a1da7022ba9f"
     }
   ],
   "license": "Mixamo embedded project use; not CC0; no standalone redistribution",
   "terms": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
   "modifications": "Locomotion retargeted to SWAT rest skeleton, horizontal root motion removed.",
-  "output_sha256": "c66e61b646e54a62604090efc88a6ba1215f9b2eeddd37c267fd556efb7c52d6"
+  "output_sha256": "709c91c008dabc50e4e906f46052b263da05c5f2ad1a0822142381674ad88902"
 }
