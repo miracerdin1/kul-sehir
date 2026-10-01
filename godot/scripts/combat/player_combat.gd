@@ -14,6 +14,7 @@ var owned := {"knife": false, "pistol": false, "shotgun": false, "rifle": false}
 var ammo := {"ammo9": 0, "ammo762": 0, "shell": 0}
 var magazine := {"pistol": 0, "shotgun": 0, "rifle": 0}
 var bandages := 1
+var supplies := {"food": 0, "water": 0}
 var weapon := "fists"
 var cooldown := 0.0
 var reload_left := 0.0
@@ -101,6 +102,8 @@ func give(kind: String, amount: int) -> bool:
 					select(kind)
 		"bandage":
 			bandages += amount
+		"food", "water":
+			supplies[kind] += amount
 		_:
 			if not ammo.has(kind):
 				return false
@@ -120,6 +123,9 @@ func summary() -> Array[String]:
 			lines.append(Weapons.label(kind, ammo[kind]))
 	if bandages > 0:
 		lines.append(Weapons.label("bandage", bandages))
+	for kind in supplies:
+		if supplies[kind] > 0:
+			lines.append(Weapons.label(kind, supplies[kind]))
 	return lines
 
 

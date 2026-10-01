@@ -24,6 +24,7 @@ var can_use_stove := false
 var ambient: AudioStreamPlayer
 var director: Node3D
 var combat_interaction := {}
+var focused_door := {}
 var dead := false
 
 
@@ -172,6 +173,7 @@ func _process(delta: float) -> void:
 
 func find_interaction() -> void:
 	focused_pickup = -1
+	focused_door = {}
 	can_use_stove = false
 	var nearest := 2.1
 	for index in range(street.pickups.size()):
@@ -192,7 +194,11 @@ func find_interaction() -> void:
 		hud.prompt.text = "[ E ]   " + combat_interaction.label
 		return
 	combat_interaction = {}
-	can_use_stove = player.position.distance_to(street.stove_position) < 2.2 and has_line_of_sight(street.stove_position + Vector3(0, 1.2, 0))
+	focused_door = city.nearest_door(player.position)
+	if not focused_door.is_empty():
+		hud.prompt.text = "[ E ]   " + ("Kapıyı kapat" if focused_door.open else "Kapıyı aç")
+		return
+	can_use_stove =player.position.distance_to(street.stove_position) < 2.2 and has_line_of_sight(street.stove_position + Vector3(0, 1.2, 0))
 	hud.prompt.text = "[ E ]   " + ("Hazırlığı tamamla" if inventory.size() == 3 and not completed else "Sobanın yanında ısın") if can_use_stove else ""
 
 
@@ -235,6 +241,9 @@ func interact() -> void:
 		if taken or target.has("body"):
 			pick_up(target.node, taken)
 		find_interaction()
+		return
+	if not focused_door.is_empty():
+		city.toggle_door(focused_door)
 		return
 	if not can_use_stove:
 		return

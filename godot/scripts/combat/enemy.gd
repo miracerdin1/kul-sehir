@@ -167,6 +167,8 @@ func die(head: bool) -> void:
 		loot.append(["bandage", 1])
 	if rng.randf() < 0.25:
 		loot.append(["knife", 1])
+	if rng.randf() < 0.35:
+		loot.append(["food", 1])
 
 
 func sees_player(distance: float) -> bool:

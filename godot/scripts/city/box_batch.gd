@@ -18,10 +18,14 @@ var count := 0
 
 # center is relative to the block origin; tilt is a small x/z lean for rubble.
 func add(material: Material, center: Vector3, size: Vector3, yaw := 0.0, shade := 1.0, tilt := Vector2.ZERO) -> void:
+	add_basis(material, center, size, Basis.from_euler(Vector3(tilt.x, yaw, tilt.y)), shade)
+
+
+# A box turned by any rotation, such as a stair rail.
+func add_basis(material: Material, center: Vector3, size: Vector3, basis: Basis, shade := 1.0) -> void:
 	if not sets.has(material):
 		sets[material] = [PackedVector3Array(), PackedVector3Array(), PackedColorArray()]
 	var arrays: Array = sets[material]
-	var basis := Basis.from_euler(Vector3(tilt.x, yaw, tilt.y))
 	var half := size / 2.0
 	var color := Color(shade, shade, shade)
 	for face: Array in FACES:

@@ -265,6 +265,44 @@ func check_city(game: Node3D) -> void:
 	game.director.enemies.erase(walker)
 	walker.queue_free()
 	await frames(game, 2)
+	await check_buildings(game)
+
+
+# Doors that open, stairs to an upper floor, and supplies worth searching for.
+func check_buildings(game: Node3D) -> void:
+	var city = game.city
+	var player = game.player
+	var supplies: Array = city.loot.filter(func(entry): return entry[0] in ["food", "water"])
+	check(supplies.size() >= 40, "Buildings hold supplies (%d)" % supplies.size())
+	check(supplies.any(func(entry): return entry[2].y > city.FLOOR_HEIGHT), "Some supplies lie on upper floors")
+	check(city.stair_list.size() >= 5, "Two-storey buildings have stairs (%d)" % city.stair_list.size())
+	var flight: Array = city.stair_list[0]
+	var foot: Vector3 = flight[0]
+	var landing: Vector3 = flight[1]
+	player.position = foot + Vector3(0, 0.2, 0)
+	player.velocity = Vector3.ZERO
+	var climb := landing - foot
+	player.yaw = atan2(-climb.x, -climb.z)
+	await frames(game, 10)
+	await hold(game, ["move_forward"], 170)
+	await frames(game, 10)
+	check(player.position.y > city.FLOOR_HEIGHT - 0.3 and player.is_on_floor(), "Stairs lead to the upper floor (y %.2f)" % player.position.y)
+	check(city.doors.size() >= 10, "Buildings have doors (%d)" % city.doors.size())
+	var door: Dictionary = city.doors[0]
+	var leaf: Node3D = door.leaf
+	player.position = leaf.global_position + Vector3(0, -1.0, 0) + (leaf.global_position - door.pivot.global_position).normalized().cross(Vector3.UP) * 0.9
+	player.velocity = Vector3.ZERO
+	await frames(game, 5)
+	game.find_interaction()
+	check(not game.focused_door.is_empty(), "A door can be used up close")
+	var was_open: bool = door.open
+	game.interact()
+	await frames(game, 30)
+	var target: float = door.closed if was_open else door.open_yaw
+	check(door.open != was_open and absf(angle_difference(door.pivot.rotation.y, target)) < 0.05, "E swings the door " + ("shut" if was_open else "open"))
+	player.position = Vector3(0, 0.2, 10)
+	player.velocity = Vector3.ZERO
+	await frames(game, 5)
 
 
 func check_combat(game: Node3D) -> void:
@@ -403,6 +441,27 @@ func capture(game: Node3D) -> void:
 	game.player.pitch = 0.05
 	await frames(game, 100)
 	await save_frame(game, "res://qa-output/city.png")
+	# A doorway from outside, then the stairs from their foot.
+	var door: Dictionary = game.city.doors[2]
+	var across := Vector3(cos(door.closed), 0, -sin(door.closed))
+	var front: Vector3 = across.cross(Vector3.UP)
+	# The door swings inward, so outside is the other way.
+	if front.dot(Vector3(cos(door.open_yaw), 0, -sin(door.open_yaw))) > 0.0:
+		front = -front
+	var outside: Vector3 = door.pivot.global_position + across * 0.5 + front * 5.0
+	game.player.position = outside + Vector3(0, 0.2, 0)
+	var look: Vector3 = door.pivot.global_position - outside
+	game.player.yaw = atan2(-look.x, -look.z)
+	game.player.pitch = 0.05
+	await frames(game, 60)
+	await save_frame(game, "res://qa-output/house.png")
+	var flight: Array = game.city.stair_list[0]
+	game.player.position = flight[0] + Vector3(0, 0.2, 0)
+	var climb: Vector3 = flight[1] - flight[0]
+	game.player.yaw = atan2(-climb.x, -climb.z)
+	game.player.pitch = 0.2
+	await frames(game, 60)
+	await save_frame(game, "res://qa-output/stairs.png")
 	game.city_map.toggle(true)
 	await frames(game, 5)
 	await save_frame(game, "res://qa-output/map.png")
