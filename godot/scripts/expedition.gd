@@ -4,6 +4,7 @@ const Street = preload("res://scripts/street.gd")
 const Survivor = preload("res://scripts/survivor.gd")
 const Hud = preload("res://scripts/hud.gd")
 const InputBindings = preload("res://scripts/input_bindings.gd")
+const CombatDirector = preload("res://scripts/combat/combat_director.gd")
 const PICKUP_TIME := 1.3
 
 var street: Node3D
@@ -17,6 +18,9 @@ var low_quality := false
 var focused_pickup := -1
 var can_use_stove := false
 var ambient: AudioStreamPlayer
+var director: Node3D
+var combat_interaction := {}
+var dead := false
 
 
 func _ready() -> void:
@@ -32,6 +36,10 @@ func _ready() -> void:
 	hud.start_requested.connect(start_game)
 	hud.exit_requested.connect(func(): get_tree().quit())
 	hud.quality_requested.connect(toggle_quality)
+	director = CombatDirector.new()
+	add_child(director)
+	director.setup(self)
+	director.player_died.connect(on_player_died)
 	create_audio()
 	hud.show_menu(false)
 	if "--smoke-test" in OS.get_cmdline_user_args() or "--capture-qa" in OS.get_cmdline_user_args():
@@ -69,6 +77,14 @@ func start_game() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 	if first_start:
 		hud.notify("Yakıt kaldırımda, erzak depoda. Metal parça bariyerlerin yakınında.")
+		if not has_meta("qa_runner"):
+			director.start()
+
+
+func on_player_died(_cause: String) -> void:
+	dead = true
+	paused = true
+	hud.prompt.text = ""
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -77,7 +93,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED if fullscreen else DisplayServer.WINDOW_MODE_FULLSCREEN)
 	if event.is_action_pressed("performance"):
 		hud.performance.visible = not hud.performance.visible
-	if not started:
+	if not started or dead:
 		return
 	if event.is_action_pressed("pause_game"):
 		if hud.inventory_panel.visible:
@@ -95,7 +111,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		paused = true
 		player.active = false
 		player.animation.active = false
-		hud.show_inventory(inventory)
+		hud.show_inventory(inventory + director.combat.summary())
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	if not paused and event.is_action_pressed("interact"):
 		interact()
@@ -149,23 +165,31 @@ func find_interaction() -> void:
 		focused_pickup = index
 	if focused_pickup >= 0:
 		hud.prompt.text = "[ E ]   " + street.pickups[focused_pickup].label + " al"
+		combat_interaction = {}
 		return
+	combat_interaction = director.nearest_interaction(player.position)
+	if not combat_interaction.is_empty() and has_line_of_sight(combat_interaction.node.global_position + Vector3(0, 0.3, 0), combat_interaction.node):
+		hud.prompt.text = "[ E ]   " + combat_interaction.label
+		return
+	combat_interaction = {}
 	can_use_stove = player.position.distance_to(street.stove_position) < 2.2 and has_line_of_sight(street.stove_position + Vector3(0, 1.2, 0))
 	hud.prompt.text = "[ E ]   " + ("Hazırlığı tamamla" if inventory.size() == 3 and not completed else "Sobanın yanında ısın") if can_use_stove else ""
 
 
-func has_line_of_sight(target: Vector3) -> bool:
+func has_line_of_sight(target: Vector3, ignore: Node = null) -> bool:
 	var query := PhysicsRayQueryParameters3D.create(player.position + Vector3(0, 1.35, 0), target + Vector3(0, 0.2, 0))
-	query.exclude = [player.get_rid()]
+	query.exclude = [player.get_rid()] if not ignore is CollisionObject3D else [player.get_rid(), ignore.get_rid()]
 	return get_world_3d().direct_space_state.intersect_ray(query).is_empty()
 
 
 # The survivor turns to the item, kneels, and the item leaves the ground when the
 # hand reaches it, halfway through the clip.
-func pick_up(node: Node3D) -> void:
+func pick_up(node: Node3D, take := true) -> void:
 	var to_item := node.global_position - player.global_position
 	player.visual.rotation.y = atan2(to_item.x, to_item.z)
 	player.play_action("PickUp", PICKUP_TIME)
+	if not take:
+		return
 	await get_tree().create_timer(PICKUP_TIME * 0.5).timeout
 	node.hide()
 
@@ -180,6 +204,16 @@ func interact() -> void:
 		inventory.append(item.label)
 		hud.notify(item.label + " çantaya eklendi.")
 		pick_up(item.node)
+		find_interaction()
+		return
+	if not combat_interaction.is_empty():
+		if player.busy():
+			return
+		var target: Dictionary = combat_interaction
+		director.use(target)
+		var taken: bool = target.has("pickup") and target.pickup.taken
+		if taken or target.has("body"):
+			pick_up(target.node, taken)
 		find_interaction()
 		return
 	if not can_use_stove:

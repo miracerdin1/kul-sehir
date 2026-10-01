@@ -30,6 +30,14 @@ CLIPS = (
     ("Jump", "JumpLand", {"start": 1.30, "end": 1.75, "no_rise": True}),
     # Kneel until the right hand is about 0.3 m above the ground, then rise again.
     ("Kneeling_Down", "PickUp", {"start": 1.05, "end": 2.25, "pingpong": True}),
+    # Weapon poses. Their arms and spine are layered over the leg clips above.
+    ("Rifle_Aiming_Idle", "AimRifle", {}),
+    ("Pistol_Idle", "AimPistol", {}),
+    ("Rifle_Idle", "HoldRifle", {}),
+    # Right-hand thrust forward, used for knife and fists.
+    ("Stabbing", "Strike", {"start": 0.10, "end": 0.80}),
+    # Falls backwards and stays down.
+    ("Death", "Death", {"start": 0.30, "end": 3.00}),
 )
 
 

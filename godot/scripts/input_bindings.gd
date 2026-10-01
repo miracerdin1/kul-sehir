@@ -10,7 +10,10 @@ static func install() -> void:
 		"interact": [KEY_E], "inventory": [KEY_B],
 		"flashlight": [KEY_F], "pause_game": [KEY_ESCAPE],
 		"performance": [KEY_F2], "fullscreen": [KEY_F11],
+		"reload": [KEY_R], "bandage": [KEY_H],
+		"weapon_1": [KEY_1], "weapon_2": [KEY_2], "weapon_3": [KEY_3], "weapon_4": [KEY_4],
 	}
+	var mouse := {"fire": MOUSE_BUTTON_LEFT, "aim": MOUSE_BUTTON_RIGHT}
 	for action: String in bindings:
 		if InputMap.has_action(action):
 			continue
@@ -19,3 +22,10 @@ static func install() -> void:
 			var key := InputEventKey.new()
 			key.physical_keycode = keycode
 			InputMap.action_add_event(action, key)
+	for action: String in mouse:
+		if InputMap.has_action(action):
+			continue
+		InputMap.add_action(action)
+		var button := InputEventMouseButton.new()
+		button.button_index = mouse[action]
+		InputMap.action_add_event(action, button)
