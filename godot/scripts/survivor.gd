@@ -1,6 +1,8 @@
 extends CharacterBody3D
 
 const AssetFactory = preload("res://scripts/asset_factory.gd")
+const ArmedBody = preload("res://scripts/combat/armed_body.gd")
+const Weapons = preload("res://scripts/combat/weapons.gd")
 # Speeds follow the HTML reference (jog 3.5, sprint 6.4, crouch and prone slower),
 # tuned so each clip plays near its natural pace and the feet do not slide.
 const WALK_SPEED := 1.6
@@ -14,7 +16,9 @@ const JUMP_STAMINA := 6.0
 # Ground speed (m/s) at which each locomotion clip plays at 1x, measured from the
 # planted foot of the Mixamo source clip.
 const CLIP_SPEED := {"Walk": 1.65, "Run": 3.0, "Sprint": 5.9, "CrouchWalk": 1.22, "Crawl": 0.45}
-const LOOPING := ["Idle", "Walk", "Run", "Sprint", "CrouchIdle", "CrouchWalk", "Crawl"]
+const LOOPING := ["Idle", "Walk", "Run", "Sprint", "CrouchIdle", "CrouchWalk", "Crawl", "AimRifle", "AimPistol", "HoldRifle"]
+# Beyond this angle between the aim and the walking direction the legs walk backwards.
+const BACKPEDAL_ANGLE := 1.75
 # JumpAir runs from take-off to touch-down; it is stretched over the real time in the air.
 const JUMP_AIR_TIME := 2.0 * JUMP_VELOCITY / GRAVITY
 const LAND_TIME := 0.35
@@ -48,6 +52,15 @@ var land_time := 0.0
 var action_time := 0.0
 var still_time := 0.0
 var motion := ""
+# Combat state, driven by PlayerCombat.
+var armed: ArmedBody
+var weapon := "fists"
+var aiming := false
+var aim_target := Vector3.ZERO
+var backwards := false
+var hp := 100.0
+var bleeding := false
+var alive := true
 
 
 func _ready() -> void:
@@ -74,6 +87,9 @@ func _ready() -> void:
 			var looped := clip_name(clip) in LOOPING
 			animation.get_animation(clip).loop_mode = Animation.LOOP_LINEAR if looped else Animation.LOOP_NONE
 		play_motion("Idle")
+		armed = ArmedBody.new(animation, model, visual)
+		if armed.rig:
+			animation.advance(0.0)
 	create_camera()
 	footstep = AudioStreamPlayer3D.new()
 	footstep.stream = load("res://assets/audio/footstep.wav")
@@ -152,8 +168,27 @@ func has_headroom(which: String) -> bool:
 	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 
+func aim_mode() -> bool:
+	return aiming and Weapons.is_gun(weapon) and stance != "prone" and alive
+
+
+func die() -> void:
+	alive = false
+	active = false
+	velocity = Vector3.ZERO
+	aiming = false
+	motion = ""
+	play_motion("Death", 0.2)
+	if animation:
+		animation.speed_scale = 1.0
+
+
 func _physics_process(delta: float) -> void:
 	if not active:
+		# The death fall keeps playing after control is gone.
+		if not alive and armed and armed.rig and animation.active:
+			animation.advance(delta)
+			armed.update(delta, false, aim_target)
 		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	# A one-off action such as picking something up roots the character in place.
@@ -167,11 +202,11 @@ func _physics_process(delta: float) -> void:
 	if exhausted and stamina >= 25.0:
 		exhausted = false
 	# Sprinting or jumping from a lowered stance stands the character up first.
-	var wants_sprint := moving and Input.is_action_pressed("sprint") and not exhausted
+	var wants_sprint := moving and Input.is_action_pressed("sprint") and not exhausted and not aim_mode()
 	if wants_sprint and stance != "stand":
 		set_stance("stand")
 	sprinting = wants_sprint and stance == "stand"
-	var speed := move_speed(Input.is_action_pressed("walk"))
+	var speed := move_speed(Input.is_action_pressed("walk") or aim_mode())
 	velocity.x = move_toward(velocity.x, direction.x * speed, delta * 14.0)
 	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 14.0)
 	if not is_on_floor():
@@ -189,8 +224,7 @@ func _physics_process(delta: float) -> void:
 	var ground_speed := Vector2(get_real_velocity().x, get_real_velocity().z).length()
 	var stamina_rate := -6.5 if sprinting and ground_speed > 0.5 else (10.0 if exhausted else (13.0 if ground_speed > 0.2 else 18.0))
 	stamina = clampf(stamina + stamina_rate * delta, 0.0, 100.0)
-	if moving:
-		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(direction.x, direction.z), delta * 12.0)
+	update_facing(direction, moving, delta)
 	if is_on_floor():
 		# Only a real fall or jump earns a landing; stepping off a kerb does not.
 		if (jumped or air_time > 0.3) and ground_speed < 1.2 and velocity.y <= 0.0:
@@ -209,6 +243,9 @@ func _physics_process(delta: float) -> void:
 			footstep.pitch_scale = randf_range(0.85, 1.1)
 			footstep.play()
 	update_animation(ground_speed, delta)
+	if armed and armed.rig:
+		animation.advance(delta)
+		armed.update(delta, aim_mode(), aim_target)
 	camera_height = lerpf(camera_height, STANCE_CAMERA[stance], minf(1.0, delta * 8.0))
 	pivot.rotation = Vector3(pitch, yaw, 0.0)
 	update_camera_collision()
@@ -217,6 +254,28 @@ func _physics_process(delta: float) -> void:
 	if position.y < -8.0:
 		position = Vector3(0.0, 0.5, 15.0)
 		velocity = Vector3.ZERO
+
+
+# Unarmed, the body turns to where it walks. Aiming, the body faces the camera and the
+# legs keep to the walking direction: backwards past BACKPEDAL_ANGLE, and never more
+# than the spine can twist away from the aim.
+func update_facing(direction: Vector3, moving: bool, delta: float) -> void:
+	backwards = false
+	if not aim_mode():
+		if moving:
+			visual.rotation.y = lerp_angle(visual.rotation.y, atan2(direction.x, direction.z), delta * 12.0)
+		return
+	var aim_yaw := yaw + PI
+	var target := aim_yaw
+	if moving:
+		var move_yaw := atan2(direction.x, direction.z)
+		var diff := wrapf(aim_yaw - move_yaw, -PI, PI)
+		if absf(diff) > BACKPEDAL_ANGLE:
+			backwards = true
+			move_yaw += PI
+			diff = wrapf(aim_yaw - move_yaw, -PI, PI)
+		target = move_yaw + signf(diff) * maxf(0.0, absf(diff) - ArmedBody.MAX_TWIST)
+	visual.rotation.y = lerp_angle(visual.rotation.y, target, delta * 12.0)
 
 
 func move_speed(walking: bool) -> float:
@@ -280,7 +339,7 @@ func update_animation(ground_speed: float, delta: float) -> void:
 		# Lying still holds the crawl pose once the cross-fade has finished.
 		if next == "Crawl" and ground_speed <= 0.2:
 			clip_rate = 0.0 if still_time > 0.3 else 0.6
-		animation.speed_scale = clip_rate
+		animation.speed_scale = -clip_rate if backwards else clip_rate
 	else:
 		animation.speed_scale = 1.0
 

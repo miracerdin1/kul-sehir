@@ -112,6 +112,7 @@ func run(game: Node3D) -> void:
 	check(not game.hud.inventory_panel.visible and game.player.active, "Closing inventory resumes movement")
 	game.toggle_quality()
 	check(game.low_quality and game.get_viewport().msaa_3d == Viewport.MSAA_DISABLED, "Performance preset applies")
+	await check_combat(game)
 	game.ambient.stop()
 	game.player.footstep.stop()
 	await frames(game, 8)
@@ -204,6 +205,124 @@ func check_motion(game: Node3D) -> void:
 	Input.action_release("move_forward")
 	check(player.motion == "Run", "Running landing goes straight back to Run, got " + player.motion)
 	await frames(game, 30)
+
+
+func idle(game: Node3D) -> void:
+	while game.player.busy():
+		await frames(game, 1)
+
+
+# Points the camera at a world position (the camera sits on a shoulder pivot, so settle twice).
+func aim_at(game: Node3D, target: Vector3) -> void:
+	for pass_index in 3:
+		var to: Vector3 = target - game.player.camera.global_position
+		game.player.yaw = atan2(-to.x, -to.z)
+		game.player.pitch = asin(clampf(to.normalized().y, -1.0, 1.0))
+		await frames(game, 2)
+
+
+func check_combat(game: Node3D) -> void:
+	var director = game.director
+	var player = game.player
+	var combat = director.combat
+	player.position = Vector3(0, 0.2, 10)
+	player.velocity = Vector3.ZERO
+	player.yaw = 0.0
+	await frames(game, 10)
+	check(combat.weapon == "fists" and director.enemies.is_empty(), "Survivor starts unarmed, no soldiers in QA")
+	var pistol: Dictionary = director.add_pickup("pistol", 6, Vector3(0.9, 0.05, 10))
+	var rounds: Dictionary = director.add_pickup("ammo9", 12, Vector3(-3.0, 0.05, 10))
+	await frames(game, 3)
+	game.find_interaction()
+	check(game.combat_interaction.get("pickup") == pistol, "Pistol on the ground can be picked up")
+	game.interact()
+	check(combat.owned.pistol and combat.weapon == "pistol" and combat.magazine.pistol == 6, "Picking up the pistol arms the survivor")
+	check(player.motion == "PickUp", "Weapon pickup plays PickUp")
+	await idle(game)
+	check(not pistol.node.visible, "Pistol leaves the ground")
+	player.position = Vector3(-2.2, 0.2, 10)
+	await frames(game, 5)
+	game.interact()
+	await idle(game)
+	check(combat.ammo.ammo9 == 12, "Ammunition goes to the reserve")
+	combat.attack()
+	check(combat.magazine.pistol == 5, "Firing spends a round")
+	await frames(game, 25)
+	combat.reload()
+	check(combat.reload_left > 0.0, "R starts a reload")
+	await frames(game, 100)
+	check(combat.magazine.pistol == 12 and combat.ammo.ammo9 == 5, "Reload fills the magazine from the reserve")
+	combat.aim_held = true
+	player.yaw = 0.7
+	await frames(game, 25)
+	check(player.aim_mode(), "Right mouse aims the pistol")
+	check(absf(wrapf(player.visual.rotation.y - (player.yaw + PI), -PI, PI)) < 0.15, "Aiming turns the body to the camera")
+	if player.armed.rig:
+		check(player.armed.aim_weight > 0.95 and player.armed.gun != null, "Aim pose and gun are on the body")
+	Input.action_press("move_back")
+	await frames(game, 25)
+	check(player.backwards and player.animation.speed_scale < 0.0, "Walking back while aiming plays the legs in reverse")
+	Input.action_press("move_left")
+	await frames(game, 20)
+	Input.action_release("move_left")
+	Input.action_release("move_back")
+	check(absf(wrapf(player.visual.rotation.y - (player.yaw + PI), -PI, PI)) <= player.armed.MAX_TWIST + 0.1, "Strafing keeps the chest within the spine's twist")
+	await frames(game, 20)
+	player.position = Vector3(0, 0.2, 10)
+	player.velocity = Vector3.ZERO
+	var target = director.spawn_enemy(Vector3(0, 0.1, 1.0), "rifle")
+	await frames(game, 3)
+	target.visual.rotation.y = PI
+	target.wait_time = 100.0
+	await aim_at(game, target.global_position + Vector3(0, 1.2, 0))
+	combat.attack()
+	await frames(game, 2)
+	check(target.hp < 100.0, "A shot at the soldier's chest hits")
+	check(target.state == "combat", "A wounded soldier turns to fight")
+	for shot in 8:
+		if not target.alive:
+			break
+		await frames(game, 20)
+		await aim_at(game, target.global_position + Vector3(0, 1.2, 0))
+		combat.attack()
+	check(not target.alive and target.motion == "Death", "Enough hits kill the soldier and play Death")
+	check(director.kills == 1, "The kill is counted")
+	combat.aim_held = false
+	player.position = target.global_position + Vector3(0.9, 0.1, 0.9)
+	await frames(game, 5)
+	game.find_interaction()
+	check(game.combat_interaction.get("label", "") == "Cesedi ara", "A body can be searched")
+	var rifle_rounds: int = combat.ammo.ammo762
+	game.interact()
+	check(target.searched and (combat.owned.rifle or combat.ammo.ammo762 > rifle_rounds), "Searching the body yields the soldier's rifle or rounds")
+	await idle(game)
+	var listener = director.spawn_enemy(Vector3(0, 0.1, -20.0), "pistol")
+	await frames(game, 3)
+	listener.visual.rotation.y = PI
+	director.alert_noise(Vector3(0, 0, -5), 40.0)
+	check(listener.state == "investigate", "Gunfire within earshot sends a soldier to investigate")
+	player.position = Vector3(0, 0.2, 8)
+	player.velocity = Vector3.ZERO
+	var watcher = director.spawn_enemy(Vector3(2.0, 0.1, -4.0), "rifle")
+	await frames(game, 3)
+	watcher.visual.rotation.y = 0.0
+	var spotted := false
+	for wait in 240:
+		await frames(game, 1)
+		if watcher.state == "combat":
+			spotted = true
+			break
+	check(spotted, "A soldier facing the survivor in daylight spots him")
+	var health: float = player.hp
+	for wait in 480:
+		await frames(game, 1)
+		if player.hp < health:
+			break
+	check(player.hp < health, "A soldier in combat wounds the survivor")
+	director.hurt_player(500.0, "QA", watcher.global_position)
+	await frames(game, 30)
+	check(not player.alive and game.dead and director.hud.death_panel.visible, "Death shows the death screen")
+	check(player.motion == "Death", "The survivor falls with Death")
 
 
 func save_frame(game: Node, path: String) -> void:
