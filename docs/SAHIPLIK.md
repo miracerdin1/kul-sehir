@@ -5,7 +5,10 @@ Tabloda başkasının yolu varsa dokunma, `GUNLUK.md`'ye istek yaz.
 
 | Yol (dosya veya klasör) | Sahip | Dal | Başlangıç | Not |
 | --- | --- | --- | --- | --- |
-| `godot/` | Codex | `codex/godot-sahiplik` | 2026-10-01 | Miraç'ın isteğiyle ilk Godot prototipinin aktarımı ve görsel geçiş hazırlığı; bu kapsamda Claude ile dosya devri günlükte koordine edilecek. |
+| `godot/` | Codex | `codex/ilk-sokak` | 2026-10-01 | Miraç'ın isteğiyle mevcut oynanabilir prototipin aktarımı; Claude PR üzerinden inceleyecek. |
+| `tools/`, `Baslat.ps1`, `Editoru-Ac.ps1`, `Oyunu-Baslat.cmd` | Codex | `codex/ilk-sokak` | 2026-10-01 | Prototip hazırlama ve başlatma dosyaları. |
+| `.gitattributes`, `.gitignore`, `README.md` | Codex | `codex/ilk-sokak` | 2026-10-01 | LFS, yerel dosya hariç tutma ve çalıştırma belgeleri. |
+| `assets/KAYNAKLAR.md` | Codex | `codex/ilk-sokak` | 2026-10-01 | Aktarılan her oyun varlığının kaynak ve lisans kaydı. |
 
 ## Kalıcı alan önerisi (Miraç değiştirebilir)
 Çakışmayı baştan azaltmak için geniş alanlar:

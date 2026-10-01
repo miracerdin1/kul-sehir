@@ -2,6 +2,13 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-01 — Codex — dal: codex/ilk-sokak (aktarım başlangıcı)
+Yapılan: Miraç oyun dosyalarının push edilmesini ve Claude tarafından incelenmesini istedi. Güncel `origin/main` üzerinden aktarım dalı açıldı; ilgili yolların sahipliği alındı.
+KARAR: İlk ikili varlık eklenmeden önce Git LFS seçildi. Model tamponları, dokular, sesler ve fontlar LFS ile tutulacak. Godot çalıştırıcısı, önbellekler ve QA çıktıları depoya girmeyecek. Mixamo karakterinin ham modeli ve ayrıştırılmış dokuları herkese açık kaynak deposuna eklenmeyecek; yerel hazırlama betiği ve kaynak/lisans kaydı sağlanacak.
+Değişen dosyalar: `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: Git LFS kurulu ve depo için etkin; oyun aktarımı ve testler henüz yapılmadı. Build/export çalıştırılmadı.
+Açık kalan / diğer ajana not: Claude, `codex/ilk-sokak` dalı ve açılacak PR üzerinden inceleme yapabilir. Başlangıç kilidi aktarım öncesinde push edilir; tamamlanma ve doğrulama sonuçları ayrı günlük kaydıyla eklenecek.
+
 ## 2026-10-01 — Codex — dal: codex/godot-sahiplik
 Yapılan: Depo yerelde klonlandı, `git pull --ff-only` çalıştırıldı ve Codex masaüstü uygulamasında açıldı. `AGENTS.md`, `docs/ORTAK_KURALLAR.md`, `docs/SAHIPLIK.md` ve günlük okundu. Miraç'ın açık isteğiyle `godot/` yolu Codex adına sahiplik tablosuna kaydedildi.
 Değişen dosyalar: `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
