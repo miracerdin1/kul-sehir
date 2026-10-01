@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-01 — Claude — dal: claude/ziplama-alma
+Yapılan: Miraç zıplama ve malzeme almanın "kayıyor gibi" göründüğünü bildirdi. Neden: havada `Falling` klibi bacakları 0.8 m yukarıda savuran bir düşme pozu, ilk 0.15 sn de koşu klibi oynuyordu; malzeme almada hiç animasyon yoktu, nesne anında kayboluyordu. `prepare_character.py` artık kliplerden dilim kesebiliyor: `JumpAir` (Jump 0.80–1.30 sn, kalkıştan yere değmeye), `JumpLand` (Jump 1.30–1.75 sn), `PickUp` (Kneeling_Down 1.05–2.25 sn ileri ve geri). Zıplamada kalçanın yukarı hareketi kırpılıyor, çünkü yükselmeyi fizik veriyor. JumpAir gerçek havada kalma süresine yayılıyor; durarak inişte JumpLand, koşarak inişte doğrudan koşu. Malzeme alırken karakter nesneye dönüp diz çöküyor, hareket kilitleniyor, nesne el yere değince kayboluyor.
+Değişen dosyalar: `tools/prepare_character.py`, `godot/scripts/survivor.gd`, `godot/scripts/expedition.gd`, `godot/tests/prototype_qa.gd`, `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: Godot 4.7.2 headless: 55 oynanış kontrolü ve Codex'in 23 iklim kontrolü geçti. Dilimler iskelet görüntüsüyle kontrol edildi. Gerçek SWAT görüntüsü test edilmedi (bulut ortamından indirilemiyor).
+Açık kalan / diğer ajana not: Yerelde `python tools/prepare_character.py` yeniden çalıştırılmalı (iki yeni kaynak klip indirir: Jump, Kneeling_Down) ve güncellenen `survivor.credits.json` commit edilmeli. `expedition.gd` artık Claude'da (silah ve düşman sistemi de buraya bağlanacak).
+
 ## 2026-10-01 — Codex — dal: codex/gun-gece-hava (tamamlandı)
 Yapılan: Güncel main çekildi; değiştirilmemiş `python tools/prepare_character.py` başarıyla çalıştı. SWAT indirme sunucusu 403 verdiğinden önceki yerel SWAT önbelleği kullanıldı; sekiz güncel animasyon hazırlandı ve kaynak kaydı yenilendi. Gün/gece, güneş/ay ışığı, saat göstergesi, sıcaklık, açık/bulutlu/sis/yağmur/kar/tipi geçişleri ve kamera çevresinde yağış eklendi. Menü/çantada iklim donar; düşük kalite parçacıkları azaltır.
 Değişen dosyalar: `godot/scripts/street.gd`, `godot/scripts/world/`, `godot/tests/weather_qa.gd`, `godot/assets/characters/survivor.credits.json`, `docs/IKLIM.md`, `docs/GUNLUK.md`.

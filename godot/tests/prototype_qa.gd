@@ -73,8 +73,21 @@ func run(game: Node3D) -> void:
 		game.player.position = item.node.global_position + Vector3(0.8, 0.1, 0)
 		game.player.velocity = Vector3.ZERO
 		await frames(game, 5)
+		while game.player.busy():
+			await frames(game, 1)
+		var before: Vector3 = game.player.position
 		game.interact()
 		check(item.collected, "Nearby supply collected: " + item.id)
+		check(game.player.motion == "PickUp" and game.player.busy(), "Picking up plays PickUp: " + item.id)
+		Input.action_press("move_forward")
+		await frames(game, 20)
+		Input.action_release("move_forward")
+		var shift: Vector3 = game.player.position - before
+		check(Vector2(shift.x, shift.z).length() < 0.05, "Picking up roots the survivor: " + item.id)
+		check(item.node.visible, "Item stays until the hand reaches it: " + item.id)
+		while game.player.busy():
+			await frames(game, 1)
+		check(not item.node.visible, "Item is gone after the pickup: " + item.id)
 		var count: int = game.inventory.size()
 		game.interact()
 		check(game.inventory.size() == count, "Supply cannot be duplicated: " + item.id)
@@ -169,11 +182,28 @@ func check_motion(game: Node3D) -> void:
 	check(player.stance == "stand", "Sprinting from a crouch stands up")
 	await frames(game, 30)
 	Input.action_press("jump")
-	await frames(game, 20)
+	await frames(game, 2)
 	Input.action_release("jump")
-	check(player.motion == "Fall", "Airborne plays Fall, got " + player.motion)
-	await frames(game, 60)
-	check(player.is_on_floor() and player.motion == "Idle", "Landing returns to Idle")
+	check(player.motion == "JumpAir", "Jumping plays JumpAir at once, got " + player.motion)
+	await frames(game, 20)
+	check(not player.is_on_floor() and player.motion == "JumpAir", "JumpAir holds while airborne")
+	while not player.is_on_floor():
+		await frames(game, 1)
+	await frames(game, 2)
+	check(player.motion == "JumpLand", "Standing landing plays JumpLand, got " + player.motion)
+	await frames(game, 40)
+	check(player.motion == "Idle", "Landing returns to Idle")
+	Input.action_press("move_forward")
+	await frames(game, 30)
+	Input.action_press("jump")
+	await frames(game, 2)
+	Input.action_release("jump")
+	while not player.is_on_floor():
+		await frames(game, 1)
+	await frames(game, 3)
+	Input.action_release("move_forward")
+	check(player.motion == "Run", "Running landing goes straight back to Run, got " + player.motion)
+	await frames(game, 30)
 
 
 func save_frame(game: Node, path: String) -> void:
