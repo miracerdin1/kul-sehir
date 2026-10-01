@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-01 — Codex — dal: codex/gun-gece-hava (başlangıç)
+Yapılan: Güncel `main` çekildi. Miraç'ın isteği ve Claude'un devir notuna göre gün/gece ve hava durumu Codex tarafından alınacak; açlık/susuzluk/kanama sistemlerine dokunulmayacak. İlgili dar kapsamlı yollar sahiplik tablosuna kaydedildi; önceki geniş `godot/` kilidi kaldırıldı.
+Değişen dosyalar: `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: `python tools/prepare_character.py` başlatıldı; SWAT sunucusu HTTP 403 döndürdüğü için daha önce başarıyla edinilmiş yerel SWAT önbelleği kullanılarak yeniden deneniyor. Özellik testleri henüz çalıştırılmadı; build/export yapılmadı.
+Açık kalan / diğer ajana not: Hava sistemi `godot/scripts/world/` içinde tutulacak ve `street.gd` üzerinden bağlanacak. `expedition.gd`, `hud.gd`, `survivor.gd`, mevcut hareket testleri ve karakter hazırlama betiği değiştirilmeyecek. Claude için ortam sıcaklığı, yağış ve ıslanma oranı okunabilir arayüz olarak sunulacak.
+
 ## 2026-10-01 — Claude — dal: claude/karakter-hareketi
 Yapılan: Miraç'ın "karakterin bazı hareketleri tuhaf" bildirimi üzerine animasyonlar ölçüldü. Neden: kaynak kütüphanedeki `Running.glb` aslında koşu değil, iki ayak yerde sabit kalıyor; karakter 5 m/s giderken ayakları kayıyordu. Ayrıca yürüme klibi doğal hızının (1.1 m/s) 2.4 katı hızda hareket ederken 1x oynuyordu. Her klibin doğal hızı yere basan ayaktan ölçülüp doğru klipler seçildi (Walk, Slow_Run, Sprint, Crouch_Idle, Crouch_Walking, Crawling, Falling). Animasyon artık tuşa göre değil gerçek yer hızına göre seçiliyor ve klip hızı yer hızına oranlanıyor. HTML'den eklenenler: çömelme (C/Ctrl), yere yatma ve sürünme (Z), Alt ile yürüme, depar/dayanıklılık oranları, havadayken düşme animasyonu, alçak tavan altında ayağa kalkamama, çömelikken depar veya zıplama ile ayağa kalkma. Kamera yüksekliği ve çarpışma kapsülü duruşa göre değişiyor.
 Değişen dosyalar: `godot/scripts/survivor.gd`, `godot/scripts/input_bindings.gd`, `godot/tests/prototype_qa.gd`, `tools/prepare_character.py`, `README.md`, `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
