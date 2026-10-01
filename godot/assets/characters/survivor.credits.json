@@ -1,6 +1,6 @@
 {
   "character": "SWAT by Adobe Mixamo",
-  "animations": "Idle / Walk / Slow_Run / Sprint / Crouch_Idle / Crouch_Walking / Crawling / Falling by Adobe Mixamo",
+  "animations": "Idle / Walk / Slow_Run / Sprint / Crouch_Idle / Crouch_Walking / Crawling / Jump / Kneeling_Down / Rifle_Aiming_Idle / Pistol_Idle / Rifle_Idle / Stabbing / Death by Adobe Mixamo",
   "sources": [
     {
       "url": "https://pub-2534e921bf9c4314addcd4d8a6e98b7b.r2.dev/avatars/mixamo/glb/swat.glb",
@@ -35,12 +35,36 @@
       "sha256": "f6f60e66ff7a1ff5b1d6ff9d40e0ee323d6ec3ac9ab41c41393e9169e9005538"
     },
     {
-      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Falling.glb",
-      "sha256": "85abfb93f29031fce7a35bab910b7a8dc9a4002f891a7ce915a1a1da7022ba9f"
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Jump.glb",
+      "sha256": "04114dc570431aaa9004c165eddd990cc849d3f2a0496dba595138830494ae6a"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Kneeling_Down.glb",
+      "sha256": "9d8d30ddb9c5499bb6c1a60da54a2573d401549ce921f604ad6977eee74f70ab"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Rifle_Aiming_Idle.glb",
+      "sha256": "12d3a4489b7591b04fc90f3db0bf6b619aa4550dc979c8f3dcaf183fe2c7a654"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Pistol_Idle.glb",
+      "sha256": "26f0440cd16205bf2f666050f77677f7c7436ca5d0b68d6e6065ad45ccba8ae0"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Rifle_Idle.glb",
+      "sha256": "24d234040490f6ec81bd47b2db713a9fe8c77ac297d839374c122a1a3671a29b"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Stabbing.glb",
+      "sha256": "f80a41a154eaf4d469874d713735cf644e125f1e68daa93f031242ce8f4c2dda"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Death.glb",
+      "sha256": "fe25cf6b5c24703d410ce168a2bf1dfce0ac0189891b83291a661e2c4b411b67"
     }
   ],
   "license": "Mixamo embedded project use; not CC0; no standalone redistribution",
   "terms": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
   "modifications": "Locomotion retargeted to SWAT rest skeleton, horizontal root motion removed.",
-  "output_sha256": "709c91c008dabc50e4e906f46052b263da05c5f2ad1a0822142381674ad88902"
+  "output_sha256": "337ca0bb2b9a6fc3fe666587b6eecac2d6a443334f1062b6d417bd3278ab215c"
 }
