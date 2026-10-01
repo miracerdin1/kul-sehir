@@ -1,0 +1,348 @@
+[
+  {
+    "id": "covered_car",
+    "source": "https://polyhaven.com/a/covered_car",
+    "license": "CC0-1.0",
+    "authors": {
+      "MP": "All"
+    },
+    "files": {
+      "include": {
+        "covered_car.bin": {
+          "size": 394464,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/covered_car/covered_car.bin",
+          "md5": "38f16c2c092dff1191ac5383acaf2ca0"
+        },
+        "textures/covered_car_nor_gl_1k.jpg": {
+          "size": 641340,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/covered_car/covered_car_nor_gl_1k.jpg",
+          "md5": "afc43e8dd74213483a454cdb00f0f541"
+        },
+        "textures/covered_car_arm_1k.jpg": {
+          "size": 745781,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/covered_car/covered_car_arm_1k.jpg",
+          "md5": "62f9a8c8719ce46ee5464462ec6ed6fc"
+        },
+        "textures/covered_car_diff_1k.jpg": {
+          "size": 558004,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/covered_car/covered_car_diff_1k.jpg",
+          "md5": "61c107225ca1cbd523d6d6e9c1775f22"
+        }
+      },
+      "size": 9687,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/covered_car/covered_car_1k.gltf",
+      "md5": "c38cd2ddf3fe2abe7ed8df2fd6020b84"
+    }
+  },
+  {
+    "id": "barrel_stove",
+    "source": "https://polyhaven.com/a/barrel_stove",
+    "license": "CC0-1.0",
+    "authors": {
+      "MP": "All"
+    },
+    "files": {
+      "include": {
+        "textures/barrel_stove_diff_1k.jpg": {
+          "size": 858608,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/barrel_stove/barrel_stove_diff_1k.jpg",
+          "md5": "3f20af89cf63352537c3c875dbc61f1e"
+        },
+        "textures/barrel_stove_nor_gl_1k.jpg": {
+          "size": 228496,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/barrel_stove/barrel_stove_nor_gl_1k.jpg",
+          "md5": "500cf0890066f4223d324131d5672d1c"
+        },
+        "textures/barrel_stove_arm_1k.jpg": {
+          "size": 789380,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/barrel_stove/barrel_stove_arm_1k.jpg",
+          "md5": "17ee54647d1f2e9b4e43fe700c17fad0"
+        },
+        "barrel_stove.bin": {
+          "size": 267680,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/barrel_stove/barrel_stove.bin",
+          "md5": "6f152ba1f02c40efc326247416d18a51"
+        }
+      },
+      "size": 2747,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/barrel_stove/barrel_stove_1k.gltf",
+      "md5": "a8d7092ddb16690f467e282e5615645f"
+    }
+  },
+  {
+    "id": "concrete_road_barrier",
+    "source": "https://polyhaven.com/a/concrete_road_barrier",
+    "license": "CC0-1.0",
+    "authors": {
+      "Amal Kumar": "All"
+    },
+    "files": {
+      "include": {
+        "textures/concrete_road_barrier_nor_gl_1k.jpg": {
+          "size": 961760,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/concrete_road_barrier/concrete_road_barrier_nor_gl_1k.jpg",
+          "md5": "5cc77a0a52de7f3e6c7405b5bfedfc6f"
+        },
+        "textures/concrete_road_barrier_arm_1k.jpg": {
+          "size": 619502,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/concrete_road_barrier/concrete_road_barrier_arm_1k.jpg",
+          "md5": "a289412cc7fe2c265f0975b31d8edda1"
+        },
+        "textures/concrete_road_barrier_diff_1k.jpg": {
+          "size": 792641,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/concrete_road_barrier/concrete_road_barrier_diff_1k.jpg",
+          "md5": "0fc11541996e1ddbdb1875dff35bc1c9"
+        },
+        "concrete_road_barrier.bin": {
+          "size": 1374016,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/concrete_road_barrier/concrete_road_barrier.bin",
+          "md5": "f256cb4d2bd9e5623b062502605dfcf2"
+        }
+      },
+      "size": 2868,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/concrete_road_barrier/concrete_road_barrier_1k.gltf",
+      "md5": "6d6feaf068f434e8dc163a1a9d983f4a"
+    }
+  },
+  {
+    "id": "metal_jerrycan",
+    "source": "https://polyhaven.com/a/metal_jerrycan",
+    "license": "CC0-1.0",
+    "authors": {
+      "Sean Buckley": "All"
+    },
+    "files": {
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/metal_jerrycan/metal_jerrycan_1k.gltf",
+      "md5": "bd328cec77ebf1c6889abba620abc4b6",
+      "size": 2793,
+      "include": {
+        "textures/metal_jerrycan_nor_gl_1k.jpg": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/metal_jerrycan/metal_jerrycan_nor_gl_1k.jpg",
+          "md5": "659b660e67aafc748364fa9d8a23059e",
+          "size": 885424
+        },
+        "textures/metal_jerrycan_diff_1k.jpg": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/metal_jerrycan/metal_jerrycan_diff_1k.jpg",
+          "md5": "d265ad6d7ae3583dbd1212743092ecc7",
+          "size": 673499
+        },
+        "textures/metal_jerrycan_arm_1k.jpg": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/metal_jerrycan/metal_jerrycan_arm_1k.jpg",
+          "md5": "b1aa1ec8f9944e784b64ef64e3b0f7f1",
+          "size": 988166
+        },
+        "metal_jerrycan.bin": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/metal_jerrycan/metal_jerrycan.bin",
+          "md5": "10b2255555debf5e8e0effb5735b2a39",
+          "size": 484676
+        }
+      }
+    }
+  },
+  {
+    "id": "long_life_food",
+    "source": "https://polyhaven.com/a/long_life_food",
+    "license": "CC0-1.0",
+    "authors": {
+      "Mia Pecina Zorko": "All"
+    },
+    "files": {
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/long_life_food/long_life_food_1k.gltf",
+      "md5": "fbdae30e5d57523abf1582a9c794ee79",
+      "size": 7394,
+      "include": {
+        "textures/long_life_food_nor_gl_1k.jpg": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/long_life_food/long_life_food_nor_gl_1k.jpg",
+          "md5": "230043dc547be2c3be0d7895f317d36e",
+          "size": 296773
+        },
+        "textures/long_life_food_diff_1k.jpg": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/long_life_food/long_life_food_diff_1k.jpg",
+          "md5": "572a480d7cf1b01e99c7b98dd21969dd",
+          "size": 715844
+        },
+        "textures/long_life_food_arm_1k.jpg": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/long_life_food/long_life_food_arm_1k.jpg",
+          "md5": "417d9dc995b0aa98d18d8ff742a3ee6f",
+          "size": 853256
+        },
+        "long_life_food.bin": {
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/4k/long_life_food/long_life_food.bin",
+          "md5": "c2920566fe14cea54121ba23450af26b",
+          "size": 158640
+        }
+      }
+    }
+  },
+  {
+    "id": "can_rusted",
+    "source": "https://polyhaven.com/a/can_rusted",
+    "license": "CC0-1.0",
+    "authors": {
+      "Rahul Chaudhary": "All"
+    },
+    "files": {
+      "include": {
+        "textures/can_rusted_diff_1k.jpg": {
+          "size": 739913,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/can_rusted/can_rusted_diff_1k.jpg",
+          "md5": "24b33db877edaec5188dce65173c0b21"
+        },
+        "textures/can_rusted_nor_gl_1k.jpg": {
+          "size": 663638,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/can_rusted/can_rusted_nor_gl_1k.jpg",
+          "md5": "ed5ad746cce6b3c445a38027ff362c15"
+        },
+        "can_rusted.bin": {
+          "size": 97440,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/8k/can_rusted/can_rusted.bin",
+          "md5": "a94d22d809af22247da3db093645a1d7"
+        },
+        "textures/can_rusted_arm_1k.jpg": {
+          "size": 609708,
+          "url": "https://dl.polyhaven.org/file/ph-assets/Models/jpg/1k/can_rusted/can_rusted_arm_1k.jpg",
+          "md5": "c0244295d1e9d94070676a1bcd72c482"
+        }
+      },
+      "size": 2990,
+      "url": "https://dl.polyhaven.org/file/ph-assets/Models/gltf/1k/can_rusted/can_rusted_1k.gltf",
+      "md5": "7c889968e168cac6b98bf4b08af35fd9"
+    }
+  },
+  {
+    "id": "rock_04",
+    "source": "https://polyhaven.com/a/rock_04",
+    "license": "CC0-1.0",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "files": {
+      "size": 2660,
+      "md5": "45a96c4df2db2a81f5edba4dc887101b",
+      "include": {
+        "textures/rock_04_diff_1k.jpg": {
+          "size": 815398,
+          "md5": "cf0ec6db74559af9204840dbe1e30a37",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_04/rock_04_diff_1k.jpg"
+        },
+        "rock_04.bin": {
+          "size": 2369524,
+          "md5": "2f442fdf46435d4e64908513bc7a4e0f",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/8k/rock_04/rock_04.bin"
+        },
+        "textures/rock_04_nor_gl_1k.jpg": {
+          "size": 1145433,
+          "md5": "fffd1d7f7acc05c087236e07ed840e83",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_04/rock_04_nor_gl_1k.jpg"
+        },
+        "textures/rock_04_rough_1k.jpg": {
+          "size": 346231,
+          "md5": "98c2580599e79a5d004ab00072d167c3",
+          "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rock_04/rock_04_rough_1k.jpg"
+        }
+      },
+      "url": "https://dl.polyhaven.org/file/ph-assets/Textures/gltf/1k/rock_04/rock_04_1k.gltf"
+    }
+  },
+  {
+    "id": "aerial_asphalt_01",
+    "source": "https://polyhaven.com/a/aerial_asphalt_01",
+    "license": "CC0-1.0",
+    "authors": {
+      "Rob Tuytel": "All"
+    },
+    "files": {
+      "diff": {
+        "size": 635143,
+        "md5": "b41fc0114556f15fe59b260cf0978b89",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_asphalt_01/aerial_asphalt_01_diff_1k.jpg"
+      },
+      "nor_gl": {
+        "size": 560227,
+        "md5": "4e57698a025ec6734d5d4fd025b4dfe9",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_asphalt_01/aerial_asphalt_01_nor_gl_1k.jpg"
+      },
+      "rough": {
+        "size": 312445,
+        "md5": "086103ec0d34b82ba2def2d3584da8ed",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/aerial_asphalt_01/aerial_asphalt_01_rough_1k.jpg"
+      }
+    }
+  },
+  {
+    "id": "brick_wall_001",
+    "source": "https://polyhaven.com/a/brick_wall_001",
+    "license": "CC0-1.0",
+    "authors": {
+      "Rob Tuytel": "Processing",
+      "Dimitrios Savva": "Photography"
+    },
+    "files": {
+      "diff": {
+        "size": 574381,
+        "md5": "955d2d4500eb549be0f2873305782798",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_diffuse_1k.jpg"
+      },
+      "nor_gl": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_nor_gl_1k.jpg",
+        "size": 295279,
+        "md5": "be151875ed0897fc716aeef6daac8bd5"
+      },
+      "rough": {
+        "size": 211093,
+        "md5": "618ceca60a4321aecc6d61eebe53d551",
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/brick_wall_001/brick_wall_001_rough_1k.jpg"
+      }
+    }
+  },
+  {
+    "id": "blue_plaster_weathered",
+    "source": "https://polyhaven.com/a/blue_plaster_weathered",
+    "license": "CC0-1.0",
+    "authors": {
+      "Amal Kumar": "All"
+    },
+    "files": {
+      "diff": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/blue_plaster_weathered/blue_plaster_weathered_diff_1k.jpg",
+        "md5": "ab6b96054e7d17f7b8be6703cc63b404",
+        "size": 710236
+      },
+      "nor_gl": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/blue_plaster_weathered/blue_plaster_weathered_nor_gl_1k.jpg",
+        "md5": "ff205e40651a0f72617bd554e498ba3b",
+        "size": 676587
+      },
+      "rough": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/blue_plaster_weathered/blue_plaster_weathered_rough_1k.jpg",
+        "md5": "274bede903cf16d20752633169f6fcb3",
+        "size": 272132
+      }
+    }
+  },
+  {
+    "id": "rubble",
+    "source": "https://polyhaven.com/a/rubble",
+    "license": "CC0-1.0",
+    "authors": {
+      "Amal Kumar": "All"
+    },
+    "files": {
+      "diff": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rubble/rubble_diff_1k.jpg",
+        "md5": "122abdafa123de51425f4041e7a5da9a",
+        "size": 781237
+      },
+      "nor_gl": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rubble/rubble_nor_gl_1k.jpg",
+        "md5": "039c7f07e4a8b2b588a767bd27aa8b75",
+        "size": 1124135
+      },
+      "rough": {
+        "url": "https://dl.polyhaven.org/file/ph-assets/Textures/jpg/1k/rubble/rubble_rough_1k.jpg",
+        "md5": "9411655e9e02eeb0be4ec429caeb73a8",
+        "size": 380186
+      }
+    }
+  }
+]
