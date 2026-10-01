@@ -105,4 +105,4 @@ Eklenen her dosya buraya yazılır. Lisansı belirsiz dosya depoya girmez.
 
 ## Yerel karakter hazırlığı
 
-`godot/assets/characters/survivor.glb` ve içe aktarımda ayrıştırılan karakter dokuları Git tarafından hariç tutulur. `python tools/prepare_character.py` komutu SWAT karakterini ve Idle/Walking/Running kliplerini yerelde hazırlayıp uyarlama yapar. Kaynak URL ve SHA256 değerleri `godot/assets/characters/survivor.credits.json` içindedir. Ham Mixamo dosyaları bu herkese açık depoyla yeniden dağıtılmaz.
+`godot/assets/characters/survivor.glb` ve içe aktarımda ayrıştırılan karakter dokuları Git tarafından hariç tutulur. `python tools/prepare_character.py` komutu SWAT karakterini ve `CLIPS` listesindeki Mixamo kliplerini (hareket, zıplama, alma, nişan, bıçak, ölüm) yerelde hazırlayıp uyarlama yapar. Kaynak URL ve SHA256 değerleri `godot/assets/characters/survivor.credits.json` içindedir. Ham Mixamo dosyaları bu herkese açık depoyla yeniden dağıtılmaz.

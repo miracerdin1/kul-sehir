@@ -56,6 +56,10 @@ func _ready() -> void:
 		var qa = load("res://tests/prototype_qa.gd").new()
 		set_meta("qa_runner", qa)
 		qa.run.call_deferred(self)
+	elif "--city-performance" in OS.get_cmdline_user_args():
+		var check = load("res://tests/city_performance_qa.gd").new()
+		set_meta("qa_runner", check)
+		check.run.call_deferred(self)
 
 
 func create_audio() -> void:
