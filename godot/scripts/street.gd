@@ -2,6 +2,7 @@ extends Node3D
 
 const Surfaces = preload("res://scripts/surfaces.gd")
 const AssetFactory = preload("res://scripts/asset_factory.gd")
+const Climate = preload("res://scripts/world/climate.gd")
 
 var surfaces := Surfaces.new()
 var assets := AssetFactory.new()
@@ -11,6 +12,7 @@ var stove_position := Vector3(-4.9, 0.16, 8.0)
 var fire_light: OmniLight3D
 var sun: DirectionalLight3D
 var environment: Environment
+var climate: Node3D
 var time := 0.0
 
 
@@ -26,37 +28,10 @@ func _ready() -> void:
 
 
 func create_atmosphere() -> void:
-	var world_environment := WorldEnvironment.new()
-	environment = Environment.new()
-	environment.background_mode = Environment.BG_SKY
-	var sky := Sky.new()
-	var sky_material := ProceduralSkyMaterial.new()
-	sky_material.sky_top_color = Color("42535e")
-	sky_material.sky_horizon_color = Color("a5aaa3")
-	sky_material.ground_bottom_color = Color("283038")
-	sky_material.ground_horizon_color = Color("959b97")
-	sky_material.sky_curve = 0.22
-	sky.sky_material = sky_material
-	environment.sky = sky
-	environment.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	environment.ambient_light_color = Color("b9c7cf")
-	environment.ambient_light_energy = 0.58
-	environment.reflected_light_source = Environment.REFLECTION_SOURCE_SKY
-	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	environment.fog_enabled = true
-	environment.fog_light_color = Color("858f93")
-	environment.fog_density = 0.009
-	environment.fog_sky_affect = 0.3
-	world_environment.environment = environment
-	add_child(world_environment)
-	sun = DirectionalLight3D.new()
-	sun.rotation_degrees = Vector3(-34.0, -32.0, 0.0)
-	sun.light_color = Color("f0d6ae")
-	sun.light_energy = 1.5
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 55.0
-	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_PARALLEL_2_SPLITS
-	add_child(sun)
+	climate = Climate.new()
+	add_child(climate)
+	sun = climate.sun
+	environment = climate.environment
 
 
 func box(parent: Node3D, at: Vector3, size: Vector3, material: Material, solid: bool = true) -> MeshInstance3D:
@@ -300,5 +275,10 @@ func create_ash() -> void:
 
 
 func _process(delta: float) -> void:
+	var game = get_parent()
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	climate.tick(delta, camera, not game.paused, game.low_quality)
+	if game.paused:
+		return
 	time += delta
 	fire_light.light_energy = 2.8 + sin(time * 8.1) * 0.25 + sin(time * 13.2) * 0.13

@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-01 — Codex — dal: codex/gun-gece-hava (tamamlandı)
+Yapılan: Güncel main çekildi; değiştirilmemiş `python tools/prepare_character.py` başarıyla çalıştı. SWAT indirme sunucusu 403 verdiğinden önceki yerel SWAT önbelleği kullanıldı; sekiz güncel animasyon hazırlandı ve kaynak kaydı yenilendi. Gün/gece, güneş/ay ışığı, saat göstergesi, sıcaklık, açık/bulutlu/sis/yağmur/kar/tipi geçişleri ve kamera çevresinde yağış eklendi. Menü/çantada iklim donar; düşük kalite parçacıkları azaltır.
+Değişen dosyalar: `godot/scripts/street.gd`, `godot/scripts/world/`, `godot/tests/weather_qa.gd`, `godot/assets/characters/survivor.credits.json`, `docs/IKLIM.md`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: Godot 4.7.2 import hatasız; gerçek SWAT ile mevcut 40 oynanış kontrolü geçti. 23 iklim kontrolü geçti; MX450 / Mobile / 1280×720 üzerinde aynı kontroller ve dört ekran görüntüsü kaydı (27 kontrol) hatasız tamamlandı. Açık gündüz, yağmur, tipi ve gece görüntüleri incelendi. Uzun süreli FPS ölçümü ve build/export yapılmadı.
+Açık kalan / diğer ajana not: Claude, hayatta kalma entegrasyonu için `street.climate.get_environment_state()` sözleşmesini `docs/IKLIM.md` içinde bulabilir. Ortam sıcaklığı ve ıslanma oranı hazır; oyuncunun sığınak kontrolü ve vücut değerlerine uygulama hayatta kalma tarafındadır. Hareket, mevcut testler, HUD ve expedition dosyaları değiştirilmedi. Yağış parçacıklarında bina başına çarpışma ve yüzey birikmesi yok. İnceleme PR üzerinden, birleştirme Miraç onayında.
+
 ## 2026-10-01 — Codex — dal: codex/gun-gece-hava (başlangıç)
 Yapılan: Güncel `main` çekildi. Miraç'ın isteği ve Claude'un devir notuna göre gün/gece ve hava durumu Codex tarafından alınacak; açlık/susuzluk/kanama sistemlerine dokunulmayacak. İlgili dar kapsamlı yollar sahiplik tablosuna kaydedildi; önceki geniş `godot/` kilidi kaldırıldı.
 Değişen dosyalar: `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
