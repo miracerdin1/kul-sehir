@@ -12,10 +12,13 @@ Yeni klondan sonra aşağıdaki hazırlık komutlarını çalıştır. Godot ça
 
 | Tuş | İşlev |
 | --- | --- |
-| W A S D | Yürü |
+| W A S D | Hareket (varsayılan: hafif koşu) |
 | Fare | Kamerayı çevir |
-| Shift | Koş; dayanıklılık tüketir |
-| Boşluk | Zıpla |
+| Shift | Depar; dayanıklılık tüketir |
+| Alt (basılı) | Yürü |
+| C veya Ctrl | Çömel / kalk |
+| Z | Yere yat / kalk |
+| Boşluk | Zıpla (çömelik veya yatıkken ayağa kalk) |
 | E | Yakındaki malzemeyi al / sobayı kullan |
 | B | Çantayı aç veya kapat |
 | F | Fener |
@@ -31,14 +34,14 @@ Kaldırımdaki yakıt bidonunu, **Erzak Deposu** içindeki erzağı ve sokağın
 
 ## Neler var?
 
-- İskeletli, dokulu SWAT karakteri; iskelete uyarlanmış durma, yürüme ve koşma animasyonları.
+- İskeletli, dokulu SWAT karakteri; iskelete uyarlanmış durma, yürüme, hafif koşu, depar, çömelme, sürünme ve düşme animasyonları. Klip hızı gerçek yer hızına göre ayarlanır, ayaklar kaymaz.
 - Kameraya göre hareket, koşma, zıplama; duvarlara yaklaşınca kısalan omuz kamerası.
 - Fotoğraf tabanlı renk, normal ve pürüzlülük dokuları; gerçek 3B araç, soba, bariyer, taş ve malzeme modelleri.
 - Girilebilir yapılar, sabit atmosfer, güneş gölgeleri, sınırlı kül parçacıkları, ateş ışığı ve fener.
 - Türkçe menü, görev, çanta, dayanıklılık ve ısınma sistemi.
 - Orijinal üretilmiş adım sesi ve düşük seviyeli ortam uğultusu.
 
-Henüz taşınmayanlar: düşmanlar, silahlar/çatışma, açlık/susuzluk, dinamik hava ve gün/gece, kayıt sistemi, büyük harita ve prosedürel şehir. Zıplamanın ayrı bir animasyon klibi henüz yoktur. Şehir mimarisi ilk modüler düzenlemedir; el yapımı ayrıntılı yıkım sahneleri sonraki görsel çalışma kapsamındadır.
+Henüz taşınmayanlar: düşmanlar, silahlar/çatışma, açlık/susuzluk, dinamik hava ve gün/gece, kayıt sistemi, büyük harita ve prosedürel şehir. Şehir mimarisi ilk modüler düzenlemedir; el yapımı ayrıntılı yıkım sahneleri sonraki görsel çalışma kapsamındadır.
 
 ## Geliştirme
 

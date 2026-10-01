@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-01 — Claude — dal: claude/karakter-hareketi
+Yapılan: Miraç'ın "karakterin bazı hareketleri tuhaf" bildirimi üzerine animasyonlar ölçüldü. Neden: kaynak kütüphanedeki `Running.glb` aslında koşu değil, iki ayak yerde sabit kalıyor; karakter 5 m/s giderken ayakları kayıyordu. Ayrıca yürüme klibi doğal hızının (1.1 m/s) 2.4 katı hızda hareket ederken 1x oynuyordu. Her klibin doğal hızı yere basan ayaktan ölçülüp doğru klipler seçildi (Walk, Slow_Run, Sprint, Crouch_Idle, Crouch_Walking, Crawling, Falling). Animasyon artık tuşa göre değil gerçek yer hızına göre seçiliyor ve klip hızı yer hızına oranlanıyor. HTML'den eklenenler: çömelme (C/Ctrl), yere yatma ve sürünme (Z), Alt ile yürüme, depar/dayanıklılık oranları, havadayken düşme animasyonu, alçak tavan altında ayağa kalkamama, çömelikken depar veya zıplama ile ayağa kalkma. Kamera yüksekliği ve çarpışma kapsülü duruşa göre değişiyor.
+Değişen dosyalar: `godot/scripts/survivor.gd`, `godot/scripts/input_bindings.gd`, `godot/tests/prototype_qa.gd`, `tools/prepare_character.py`, `README.md`, `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: Godot 4.7.2 headless ile 40 kontrol geçti (eski 24 + 16 yeni hareket kontrolü). SWAT modeli bulut ortamından indirilemediği için testler aynı Mixamo iskeletiyle, görünmez yer tutucu karakterle yapıldı; gerçek SWAT görüntüsü ve MX450 performansı test edilmedi.
+Açık kalan / diğer ajana not: Yeni klipler için yerelde `python tools/prepare_character.py` yeniden çalıştırılmalı (survivor.credits.json da güncellenir, commit edilmeli). Codex: `godot/` kilidin sürüyor; Miraç'ın isteğiyle yalnızca yukarıdaki dosyalara dokundum ve bu dosyaları sahiplik tablosuna Claude adına yazdım. Sıradaki önerim açlık/susuzluk/kan/ıslaklık sistemini Claude'un, gün/gece ve havayı Codex'in (`street.gd`) alması.
+
 ## 2026-10-01 — Codex — dal: codex/ilk-sokak (oynanabilir prototip)
 Yapılan: Önceki yerel prototip ortak depoya aktarıldı: Godot 4.7.2 / Mobile proje, sokak, karakter hareketi ve kamera, üç malzemeli görev, çanta, ısınma, Türkçe arayüz, başlatıcılar ve hazırlık betikleri. Ücretsiz çevre modelleri/dokuları, fontlar ve sentezlenen sesler Git LFS ile eklendi. Varlıkların dosya bazlı kaynakları `assets/KAYNAKLAR.md` içinde kayıtlı.
 Değişen dosyalar: `godot/`, `tools/`, `Baslat.ps1`, `Editoru-Ac.ps1`, `Oyunu-Baslat.cmd`, `.gitattributes`, `.gitignore`, `README.md`, `assets/KAYNAKLAR.md`, `docs/GUNLUK.md`. `reference/` değiştirilmedi.

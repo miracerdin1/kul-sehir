@@ -1,35 +1,57 @@
 extends CharacterBody3D
 
 const AssetFactory = preload("res://scripts/asset_factory.gd")
-const WALK_SPEED := 2.6
-const RUN_SPEED := 5.0
-const GRAVITY := 18.0
+# Speeds follow the HTML reference (jog 3.5, sprint 6.4, crouch and prone slower),
+# tuned so each clip plays near its natural pace and the feet do not slide.
+const WALK_SPEED := 1.6
+const RUN_SPEED := 3.3
+const SPRINT_SPEED := 6.0
+const CROUCH_SPEED := 1.3
+const PRONE_SPEED := 0.55
+const GRAVITY := 16.0
+const JUMP_VELOCITY := 5.6
+const JUMP_STAMINA := 6.0
+# Ground speed (m/s) at which each locomotion clip plays at 1x, measured from the
+# planted foot of the Mixamo source clip.
+const CLIP_SPEED := {"Walk": 1.65, "Run": 3.0, "Sprint": 5.9, "CrouchWalk": 1.22, "Crawl": 0.45}
+const LOOPING := ["Idle", "Walk", "Run", "Sprint", "CrouchIdle", "CrouchWalk", "Crawl", "Fall"]
+# Capsule height and camera pivot height for each stance.
+const STANCE_HEIGHT := {"stand": 1.75, "crouch": 1.2, "prone": 0.6}
+const STANCE_CAMERA := {"stand": 1.5, "crouch": 1.05, "prone": 0.6}
+const CAPSULE_RADIUS := 0.28
 
 var active := false
 var stamina := 100.0
 var warmth := 72.0
+var stance := "stand"
 var visual: Node3D
 var animation: AnimationPlayer
+var collision: CollisionShape3D
+var capsule: CapsuleShape3D
 var pivot: Node3D
 var arm: SpringArm3D
 var camera: Camera3D
 var light: SpotLight3D
 var yaw := 0.0
 var pitch := -0.13
+var camera_height := 1.5
 var step_distance := 0.0
 var footstep: AudioStreamPlayer3D
 var exhausted := false
+var sprinting := false
+var air_time := 0.0
+var still_time := 0.0
+var motion := ""
 
 
 func _ready() -> void:
 	name = "Survivor"
-	var collision := CollisionShape3D.new()
-	var capsule := CapsuleShape3D.new()
-	capsule.radius = 0.28
-	capsule.height = 1.75
+	collision = CollisionShape3D.new()
+	capsule = CapsuleShape3D.new()
+	capsule.radius = CAPSULE_RADIUS
 	collision.shape = capsule
-	collision.position.y = 0.9
 	add_child(collision)
+	apply_stance_shape("stand")
 	floor_snap_length = 0.3
 	visual = Node3D.new()
 	add_child(visual)
@@ -43,7 +65,8 @@ func _ready() -> void:
 	animation = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	if animation:
 		for clip in animation.get_animation_list():
-			animation.get_animation(clip).loop_mode = Animation.LOOP_LINEAR
+			var looped := clip_name(clip) in LOOPING
+			animation.get_animation(clip).loop_mode = Animation.LOOP_LINEAR if looped else Animation.LOOP_NONE
 		play_motion("Idle")
 	create_camera()
 	footstep = AudioStreamPlayer3D.new()
@@ -55,7 +78,7 @@ func _ready() -> void:
 
 func create_camera() -> void:
 	pivot = Node3D.new()
-	pivot.position = Vector3(0.5, 1.5, 0.0)
+	pivot.position = Vector3(0.5, camera_height, 0.0)
 	add_child(pivot)
 	arm = SpringArm3D.new()
 	arm.spring_length = 3.8
@@ -89,6 +112,38 @@ func _unhandled_input(event: InputEvent) -> void:
 		pitch = clampf(pitch - event.relative.y * 0.0025, -0.75, 0.5)
 	if event.is_action_pressed("flashlight"):
 		light.visible = not light.visible
+	if event.is_action_pressed("crouch"):
+		set_stance("stand" if stance == "crouch" else "crouch")
+	if event.is_action_pressed("prone"):
+		set_stance("stand" if stance == "prone" else "prone")
+
+
+func set_stance(next: String) -> bool:
+	if next == stance:
+		return true
+	if next != "stand" and not is_on_floor():
+		return false
+	if STANCE_HEIGHT[next] > STANCE_HEIGHT[stance] and not has_headroom(next):
+		return false
+	stance = next
+	apply_stance_shape(next)
+	return true
+
+
+func apply_stance_shape(which: String) -> void:
+	capsule.height = STANCE_HEIGHT[which]
+	collision.position.y = STANCE_HEIGHT[which] / 2.0 + 0.025
+
+
+func has_headroom(which: String) -> bool:
+	var shape := CapsuleShape3D.new()
+	shape.radius = CAPSULE_RADIUS - 0.02
+	shape.height = STANCE_HEIGHT[which] - 0.1
+	var query := PhysicsShapeQueryParameters3D.new()
+	query.shape = shape
+	query.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, STANCE_HEIGHT[which] / 2.0 + 0.1, 0))
+	query.exclude = [get_rid()]
+	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
 
 
 func _physics_process(delta: float) -> void:
@@ -97,40 +152,105 @@ func _physics_process(delta: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction := Basis(Vector3.UP, yaw) * Vector3(input.x, 0.0, input.y)
 	var moving := direction.length_squared() > 0.01
-	if stamina <= 1.0:
+	if stamina <= 0.5:
 		exhausted = true
-	if stamina >= 25.0:
+	if exhausted and stamina >= 25.0:
 		exhausted = false
-	var running := moving and Input.is_action_pressed("sprint") and not exhausted
-	var speed := RUN_SPEED if running else WALK_SPEED
+	# Sprinting or jumping from a lowered stance stands the character up first.
+	var wants_sprint := moving and Input.is_action_pressed("sprint") and not exhausted
+	if wants_sprint and stance != "stand":
+		set_stance("stand")
+	sprinting = wants_sprint and stance == "stand"
+	var speed := move_speed(Input.is_action_pressed("walk"))
 	velocity.x = move_toward(velocity.x, direction.x * speed, delta * 14.0)
 	velocity.z = move_toward(velocity.z, direction.z * speed, delta * 14.0)
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
-	if Input.is_action_just_pressed("jump") and is_on_floor() and stamina >= 10.0:
-		velocity.y = 5.2
-		stamina -= 10.0
+	if Input.is_action_just_pressed("jump") and is_on_floor():
+		if stance != "stand":
+			set_stance("stand")
+		elif stamina >= JUMP_STAMINA:
+			velocity.y = JUMP_VELOCITY
+			stamina -= JUMP_STAMINA
 	move_and_slide()
-	stamina = clampf(stamina + (-16.0 if running else 11.0) * delta, 0.0, 100.0)
+	var ground_speed := Vector2(get_real_velocity().x, get_real_velocity().z).length()
+	var stamina_rate := -6.5 if sprinting and ground_speed > 0.5 else (10.0 if exhausted else (13.0 if ground_speed > 0.2 else 18.0))
+	stamina = clampf(stamina + stamina_rate * delta, 0.0, 100.0)
 	if moving:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(direction.x, direction.z), delta * 12.0)
-		step_distance += Vector2(velocity.x, velocity.z).length() * delta
-		if is_on_floor() and step_distance > (1.5 if running else 1.1):
+	air_time = 0.0 if is_on_floor() else air_time + delta
+	if is_on_floor() and ground_speed > 0.2:
+		step_distance += ground_speed * delta
+		if step_distance > stride_length():
 			step_distance = 0.0
+			footstep.volume_db = -19.0 if stance != "stand" else -13.0
 			footstep.pitch_scale = randf_range(0.85, 1.1)
 			footstep.play()
-	play_motion("Run" if running else ("Walk" if moving else "Idle"))
+	update_animation(ground_speed, delta)
+	camera_height = lerpf(camera_height, STANCE_CAMERA[stance], minf(1.0, delta * 8.0))
 	pivot.rotation = Vector3(pitch, yaw, 0.0)
 	update_camera_collision()
-	camera.fov = lerpf(camera.fov, 71.0 if running else 66.0, delta * 4.0)
+	camera.fov = lerpf(camera.fov, 72.0 if sprinting and ground_speed > 0.5 else 66.0, delta * 4.0)
 	visual.visible = arm.get_hit_length() > 0.65
 	if position.y < -8.0:
 		position = Vector3(0.0, 0.5, 15.0)
 		velocity = Vector3.ZERO
 
 
+func move_speed(walking: bool) -> float:
+	if stance == "prone":
+		return PRONE_SPEED
+	if stance == "crouch":
+		return CROUCH_SPEED
+	if sprinting:
+		return SPRINT_SPEED
+	return WALK_SPEED if walking or exhausted else RUN_SPEED
+
+
+func stride_length() -> float:
+	match motion:
+		"Sprint":
+			return 1.6
+		"Run":
+			return 1.25
+		"Crawl":
+			return 0.5
+	return 0.8
+
+
+# Animation follows how fast the body actually moves, not which keys are held,
+# so pushing against a wall idles instead of running in place.
+func update_animation(ground_speed: float, delta: float) -> void:
+	if not animation:
+		return
+	var next := "Idle"
+	if air_time > 0.15:
+		next = "Fall"
+	elif stance == "prone":
+		next = "Crawl"
+	elif stance == "crouch":
+		next = "CrouchWalk" if ground_speed > 0.2 else "CrouchIdle"
+	elif ground_speed > 0.2:
+		if ground_speed > (RUN_SPEED + SPRINT_SPEED) / 2.0:
+			next = "Sprint"
+		elif ground_speed > (WALK_SPEED + RUN_SPEED) / 2.0:
+			next = "Run"
+		else:
+			next = "Walk"
+	still_time = still_time + delta if ground_speed <= 0.2 else 0.0
+	play_motion(next)
+	if CLIP_SPEED.has(next):
+		var clip_rate := clampf(ground_speed / CLIP_SPEED[next], 0.6, 1.5)
+		# Lying still holds the crawl pose once the cross-fade has finished.
+		if next == "Crawl" and ground_speed <= 0.2:
+			clip_rate = 0.0 if still_time > 0.3 else 0.6
+		animation.speed_scale = clip_rate
+	else:
+		animation.speed_scale = 1.0
+
+
 func update_camera_collision() -> void:
-	var eye := global_position + Vector3(0, 1.5, 0)
+	var eye := global_position + Vector3(0, camera_height, 0)
 	var shoulder := Basis(Vector3.UP, yaw) * Vector3(0.5, 0, 0)
 	var query := PhysicsRayQueryParameters3D.create(eye, eye + shoulder.normalized() * 0.72)
 	query.exclude = [get_rid()]
@@ -144,11 +264,15 @@ func update_camera_collision() -> void:
 	arm.spring_length = 3.8 if hit.is_empty() else maxf(0.12, pivot.global_position.distance_to(hit.position) - 0.22)
 
 
-func play_motion(motion: String) -> void:
-	if not animation:
+func clip_name(clip: String) -> String:
+	return clip.get_slice("/", clip.get_slice_count("/") - 1)
+
+
+func play_motion(next: String) -> void:
+	if not animation or next == motion:
 		return
 	for clip in animation.get_animation_list():
-		if clip.to_lower() == motion.to_lower() or clip.to_lower().ends_with("/" + motion.to_lower()):
-			if animation.current_animation != clip:
-				animation.play(clip, 0.22)
+		if clip_name(clip).to_lower() == next.to_lower():
+			animation.play(clip, 0.25)
+			motion = next
 			return
