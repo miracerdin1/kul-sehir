@@ -33,6 +33,8 @@ var spawning := false
 var condition_time := 0.0
 var rng := RandomNumberGenerator.new()
 var route: Array[Vector3] = []
+# kind -> [mesh, material] shared by every pickup of that kind.
+var pickup_looks := {}
 var flash_material: StandardMaterial3D
 var tracer_material: StandardMaterial3D
 var dust_material: StandardMaterial3D
@@ -108,20 +110,44 @@ func add_pickup(kind: String, amount: int, at: Vector3) -> Dictionary:
 		node.rotation = Vector3(0, rng.randf_range(0, TAU), PI / 2.0)
 		node.position = at + Vector3(0, 0.04, 0)
 	else:
-		node = MeshInstance3D.new()
-		var box := BoxMesh.new()
-		box.size = Vector3(0.22, 0.12, 0.14) if kind != "bandage" else Vector3(0.12, 0.06, 0.12)
-		node.mesh = box
-		var material := StandardMaterial3D.new()
-		material.albedo_color = Color("5a5f3e") if kind != "bandage" else Color("d8d2c2")
-		material.roughness = 0.8
-		node.material_override = material
-		node.position = at + Vector3(0, 0.06, 0)
-		node.rotation.y = rng.randf_range(0, TAU)
+		var instance := MeshInstance3D.new()
+		instance.mesh = pickup_mesh(kind)
+		instance.material_override = pickup_material(kind)
+		# Small things are only drawn close by.
+		instance.visibility_range_end = 50.0
+		instance.position = at + Vector3(0, instance.mesh.get_aabb().size.y / 2.0, 0)
+		instance.rotation.y = rng.randf_range(0, TAU)
+		node = instance
 	add_child(node)
 	var entry := {"kind": kind, "amount": amount, "node": node, "taken": false}
 	pickups.append(entry)
 	return entry
+
+
+# Ammunition boxes, a cardboard ration pack, a water bottle, a bandage roll.
+func pickup_mesh(kind: String) -> Mesh:
+	if not pickup_looks.has(kind):
+		var mesh: PrimitiveMesh
+		if kind == "water":
+			var bottle := CylinderMesh.new()
+			bottle.top_radius = 0.035
+			bottle.bottom_radius = 0.05
+			bottle.height = 0.3
+			bottle.radial_segments = 10
+			mesh = bottle
+		else:
+			var box := BoxMesh.new()
+			box.size = {"food": Vector3(0.32, 0.2, 0.24), "bandage": Vector3(0.12, 0.06, 0.12)}.get(kind, Vector3(0.22, 0.12, 0.14))
+			mesh = box
+		var material := StandardMaterial3D.new()
+		material.albedo_color = {"food": Color("9b7a4b"), "water": Color("8eb0bf"), "bandage": Color("d8d2c2")}.get(kind, Color("5a5f3e"))
+		material.roughness = 0.35 if kind == "water" else 0.8
+		pickup_looks[kind] = [mesh, material]
+	return pickup_looks[kind][0]
+
+
+func pickup_material(kind: String) -> Material:
+	return pickup_looks[kind][1]
 
 
 # The closest weapon pickup or unsearched body within reach, or an empty dictionary.

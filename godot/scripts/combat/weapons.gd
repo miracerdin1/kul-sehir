@@ -15,6 +15,7 @@ const DATA := {
 const NAMES := {
 	"knife": "Bıçak", "pistol": "Tabanca", "shotgun": "Pompalı tüfek", "rifle": "Tüfek",
 	"ammo9": "9mm mermi", "ammo762": "7.62 mermi", "shell": "Av fişeği", "bandage": "Sargı bezi",
+	"food": "Konserve", "water": "Su şişesi",
 }
 const GUNS := ["pistol", "shotgun", "rifle"]
 
