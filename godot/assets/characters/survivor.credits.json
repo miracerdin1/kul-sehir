@@ -1,0 +1,26 @@
+{
+  "character": "SWAT by Adobe Mixamo",
+  "animations": "Idle / Walking / Running by Adobe Mixamo",
+  "sources": [
+    {
+      "url": "https://pub-2534e921bf9c4314addcd4d8a6e98b7b.r2.dev/avatars/mixamo/glb/swat.glb",
+      "sha256": "4b9be84d30b62872059597e9a5b5456c00df4b111b8556cd94e58f9ac3ad3e3e"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Idle.glb",
+      "sha256": "60b92ba7ac83bf1d6901ca5c8c4b52688cfbf94048dd8beb91112ae9fc1d8c7c"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Walking.glb",
+      "sha256": "f9027219ebf895375f0284e02c66f4e34601ab4bf299d81447a65572c873c911"
+    },
+    {
+      "url": "https://raw.githubusercontent.com/MisterYI/deevid-mixamo-assets/main/anim/Running.glb",
+      "sha256": "4646e39f0b21fa1112ed93b61f02e5e4ea6b074f567e7870673a3ff49b35a8e6"
+    }
+  ],
+  "license": "Mixamo embedded project use; not CC0; no standalone redistribution",
+  "terms": "https://helpx.adobe.com/creative-cloud/faq/mixamo-faq.html",
+  "modifications": "Locomotion retargeted to SWAT rest skeleton, horizontal root motion removed.",
+  "output_sha256": "c66e61b646e54a62604090efc88a6ba1215f9b2eeddd37c267fd556efb7c52d6"
+}

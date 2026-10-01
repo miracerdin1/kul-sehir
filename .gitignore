@@ -6,3 +6,14 @@ export_presets.cfg
 # İşletim sistemi
 .DS_Store
 Thumbs.db
+
+# Yerel çalıştırıcı, hazırlık ve doğrulama çıktıları
+.tools/
+.cache/
+__pycache__/
+*.log
+godot/qa-output/
+
+# Mixamo ham varlıkları yalnızca yerelde hazırlanır.
+godot/assets/characters/*
+!godot/assets/characters/*.credits.json

@@ -1,0 +1,27 @@
+; Kül Şehir — small, playable desktop visual prototype.
+config_version=5
+
+[application]
+config/name="Kül Şehir — İlk Sokak"
+run/main_scene="res://scenes/main.tscn"
+config/features=PackedStringArray("4.7", "Mobile")
+config/description="Terk edilmiş bir sokakta hayatta kalma prototipi."
+
+[display]
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/size/window_width_override=1280
+window/size/window_height_override=720
+window/stretch/mode="canvas_items"
+
+[rendering]
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/default_filters/use_nearest_mipmap_filter=false
+textures/default_filters/anisotropic_filtering_level=2
+anti_aliasing/quality/msaa_3d=1
+lights_and_shadows/directional_shadow/size=2048
+environment/defaults/default_clear_color=Color(0.2, 0.24, 0.27, 1)
+
+[physics]
+common/physics_ticks_per_second=60
