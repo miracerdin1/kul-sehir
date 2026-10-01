@@ -12,7 +12,7 @@ Her varlığın üreticisi, tam kaynak bağlantıları ve dosya doğrulama değe
 
 ## Karakter ve animasyon — Adobe Mixamo
 
-SWAT karakteri ile Idle, Walking ve Running animasyonları Mixamo kaynaklıdır. Karakterin GLB dönüşümü three.ws, hareket kliplerinin GLB dönüşümleri deevid-mixamo-assets üzerinden alınmıştır. Yerelde animasyonlar SWAT iskeletine uyarlanmış, yatay kök hareketi kaldırılmıştır.
+SWAT karakteri ile Idle, Walk, Slow_Run, Sprint, Crouch_Idle, Crouch_Walking, Crawling, Jump, Kneeling_Down, Rifle_Aiming_Idle, Pistol_Idle, Rifle_Idle, Stabbing ve Death animasyonları Mixamo kaynaklıdır (oyundaki klip listesi `tools/prepare_character.py` içindeki `CLIPS`). Karakterin GLB dönüşümü three.ws, hareket kliplerinin GLB dönüşümleri deevid-mixamo-assets üzerinden alınmıştır. Yerelde animasyonlar SWAT iskeletine uyarlanmış, yatay kök hareketi kaldırılmıştır.
 
 - Karakter kaynak kataloğu: https://github.com/nirholas/three.ws/blob/main/public/avatars/mixamo/catalog.json
 - Animasyon dönüşüm kaynağı: https://github.com/MisterYI/deevid-mixamo-assets

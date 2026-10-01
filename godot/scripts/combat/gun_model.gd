@@ -1,14 +1,53 @@
 extends RefCounted
 # Gun meshes. A real model at res://assets/weapons/<kind>.glb is used when present
 # (barrel along -Z, grip at the origin, a child node named "Muzzle" at the barrel tip);
-# otherwise a simple stand-in is built so the systems can be played before the art lands.
+# otherwise a stand-in is built from simple parts so the systems can be played before the art lands.
 
-const SIZES := {
-	"pistol": {"body": Vector3(0.035, 0.05, 0.2), "barrel": 0.04, "grip": 0.11, "stock": 0.0},
-	"shotgun": {"body": Vector3(0.05, 0.08, 0.42), "barrel": 0.38, "grip": 0.12, "stock": 0.3},
-	"rifle": {"body": Vector3(0.05, 0.09, 0.4), "barrel": 0.3, "grip": 0.12, "stock": 0.28},
-	"knife": {"body": Vector3(0.02, 0.03, 0.12), "barrel": 0.0, "grip": 0.0, "stock": 0.0},
+# Stand-in parts: [shape, position, size, x tilt, material]. Shapes: "box", "tube"
+# (cylinder along -Z, size.x = radius, size.z = length) and "tip" (wedge pointing -Z).
+const PARTS := {
+	"pistol": [
+		["box", Vector3(0, 0.046, -0.06), Vector3(0.03, 0.032, 0.19), 0.0, "metal"],
+		["box", Vector3(0, 0.02, -0.055), Vector3(0.027, 0.022, 0.16), 0.0, "frame"],
+		["box", Vector3(0, -0.035, 0.015), Vector3(0.028, 0.11, 0.045), 0.3, "frame"],
+		["box", Vector3(0, -0.001, -0.05), Vector3(0.006, 0.006, 0.05), 0.0, "frame"],
+		["box", Vector3(0, 0.01, -0.073), Vector3(0.006, 0.024, 0.006), 0.0, "frame"],
+		["tube", Vector3(0, 0.046, -0.155), Vector3(0.007, 0, 0.012), 0.0, "dark"],
+		["box", Vector3(0, 0.066, -0.145), Vector3(0.004, 0.007, 0.006), 0.0, "dark"],
+		["box", Vector3(0, 0.066, 0.025), Vector3(0.02, 0.007, 0.006), 0.0, "dark"],
+	],
+	"shotgun": [
+		["box", Vector3(0, 0.03, -0.05), Vector3(0.045, 0.07, 0.2), 0.0, "metal"],
+		["tube", Vector3(0, 0.052, -0.4), Vector3(0.011, 0, 0.5), 0.0, "metal"],
+		["tube", Vector3(0, 0.022, -0.33), Vector3(0.012, 0, 0.42), 0.0, "dark"],
+		["box", Vector3(0, 0.022, -0.32), Vector3(0.046, 0.046, 0.16), 0.0, "wood"],
+		["box", Vector3(0, -0.012, 0.09), Vector3(0.034, 0.06, 0.13), 0.22, "wood"],
+		["box", Vector3(0, -0.03, 0.27), Vector3(0.04, 0.1, 0.26), 0.08, "wood"],
+		["box", Vector3(0, -0.04, 0.405), Vector3(0.042, 0.11, 0.015), 0.08, "dark"],
+		["box", Vector3(0, -0.008, -0.03), Vector3(0.006, 0.006, 0.05), 0.0, "dark"],
+		["box", Vector3(0, 0.063, -0.64), Vector3(0.005, 0.008, 0.006), 0.0, "dark"],
+	],
+	"rifle": [
+		["box", Vector3(0, 0.03, -0.06), Vector3(0.042, 0.065, 0.3), 0.0, "metal"],
+		["box", Vector3(0, 0.066, -0.03), Vector3(0.038, 0.012, 0.22), 0.0, "dark"],
+		["tube", Vector3(0, 0.045, -0.38), Vector3(0.009, 0, 0.32), 0.0, "metal"],
+		["tube", Vector3(0, 0.072, -0.29), Vector3(0.008, 0, 0.2), 0.0, "metal"],
+		["box", Vector3(0, 0.036, -0.28), Vector3(0.046, 0.05, 0.18), 0.0, "wood"],
+		["box", Vector3(0, -0.035, -0.11), Vector3(0.026, 0.09, 0.06), -0.25, "dark"],
+		["box", Vector3(0, -0.11, -0.085), Vector3(0.026, 0.08, 0.058), -0.55, "dark"],
+		["box", Vector3(0, -0.045, 0.04), Vector3(0.028, 0.1, 0.04), 0.3, "wood"],
+		["box", Vector3(0, 0.0, 0.22), Vector3(0.04, 0.08, 0.24), 0.12, "wood"],
+		["box", Vector3(0, 0.075, -0.5), Vector3(0.006, 0.03, 0.008), 0.0, "dark"],
+		["tube", Vector3(0, 0.045, -0.545), Vector3(0.012, 0, 0.03), 0.0, "dark"],
+	],
+	"knife": [
+		["box", Vector3(0, 0, 0.03), Vector3(0.022, 0.026, 0.11), 0.0, "frame"],
+		["box", Vector3(0, 0, -0.028), Vector3(0.012, 0.05, 0.01), 0.0, "metal"],
+		["box", Vector3(0, 0.004, -0.1), Vector3(0.004, 0.03, 0.14), 0.0, "blade"],
+		["tip", Vector3(0, 0.004, -0.19), Vector3(0.004, 0.03, 0.04), 0.0, "blade"],
+	],
 }
+const MUZZLES := {"pistol": Vector3(0, 0.046, -0.162), "shotgun": Vector3(0, 0.052, -0.65), "rifle": Vector3(0, 0.045, -0.56), "knife": Vector3(0, 0, -0.21)}
 
 
 static func build(kind: String) -> Node3D:
@@ -23,50 +62,54 @@ static func build(kind: String) -> Node3D:
 		return model
 	var root := Node3D.new()
 	root.name = kind
-	var size: Dictionary = SIZES.get(kind, SIZES.pistol)
-	var metal := StandardMaterial3D.new()
-	metal.albedo_color = Color("2b2d2c")
-	metal.metallic = 0.7
-	metal.roughness = 0.45
-	var wood := StandardMaterial3D.new()
-	wood.albedo_color = Color("4a3527") if kind == "shotgun" else Color("23251f")
-	wood.roughness = 0.8
-	var body: Vector3 = size.body
-	add_box(root, Vector3(0, body.y * 0.5, -body.z * 0.35), body, metal)
-	if kind == "knife":
-		add_box(root, Vector3(0, 0, -0.16), Vector3(0.006, 0.025, 0.2), metal)
-	if size.barrel > 0.0:
-		var barrel := MeshInstance3D.new()
-		var tube := CylinderMesh.new()
-		tube.top_radius = 0.012 if kind == "pistol" else 0.016
-		tube.bottom_radius = tube.top_radius
-		tube.height = size.barrel
-		barrel.mesh = tube
-		barrel.material_override = metal
-		barrel.rotation.x = PI / 2.0
-		barrel.position = Vector3(0, body.y * 0.65, -body.z * 0.85 - size.barrel * 0.5 + 0.02)
-		root.add_child(barrel)
-	if size.grip > 0.0:
-		var grip := add_box(root, Vector3(0, -size.grip * 0.4, 0.02), Vector3(0.03, size.grip, 0.045), wood)
-		grip.rotation.x = 0.25
-	if size.stock > 0.0:
-		add_box(root, Vector3(0, 0.0, size.stock * 0.5 + 0.03), Vector3(0.04, 0.09, size.stock), wood)
-	if kind == "rifle":
-		add_box(root, Vector3(0, -0.07, -0.12), Vector3(0.03, 0.14, 0.05), metal)
+	var materials := {
+		"metal": material(Color("2b2d2c"), 0.45, 0.7),
+		"dark": material(Color("161716"), 0.6, 0.4),
+		"frame": material(Color("1f201f"), 0.75, 0.1),
+		"wood": material(Color("4a3527") if kind == "shotgun" else Color("5a3a22"), 0.8, 0.0),
+		"blade": material(Color("9a9c98"), 0.3, 0.9),
+	}
+	for part: Array in PARTS.get(kind, PARTS.pistol):
+		var size: Vector3 = part[2]
+		var mesh: Mesh
+		match part[0]:
+			"tube":
+				var tube := CylinderMesh.new()
+				tube.top_radius = size.x
+				tube.bottom_radius = size.x
+				tube.height = size.z
+				tube.radial_segments = 10
+				tube.rings = 1
+				mesh = tube
+			"tip":
+				var wedge := PrismMesh.new()
+				wedge.size = Vector3(size.y, size.z, size.x)
+				mesh = wedge
+			_:
+				var box := BoxMesh.new()
+				box.size = size
+				mesh = box
+		var instance := MeshInstance3D.new()
+		instance.mesh = mesh
+		instance.material_override = materials[part[4]]
+		if part[0] == "tip":
+			# Prism apex (+Y) to -Z, its triangle facing sideways.
+			instance.basis = Basis(Vector3.UP, Vector3.FORWARD, Vector3.LEFT)
+		else:
+			instance.rotation.x = part[3] + (-PI / 2.0 if part[0] == "tube" else 0.0)
+		instance.position = part[1]
+		instance.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		root.add_child(instance)
 	var muzzle := Marker3D.new()
 	muzzle.name = "Muzzle"
-	muzzle.position = Vector3(0, body.y * 0.65, -body.z * 0.85 - size.barrel + 0.02)
+	muzzle.position = MUZZLES.get(kind, MUZZLES.pistol)
 	root.add_child(muzzle)
 	return root
 
 
-static func add_box(parent: Node3D, at: Vector3, size: Vector3, material: Material) -> MeshInstance3D:
-	var mesh := MeshInstance3D.new()
-	var box := BoxMesh.new()
-	box.size = size
-	mesh.mesh = box
-	mesh.material_override = material
-	mesh.position = at
-	mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	parent.add_child(mesh)
-	return mesh
+static func material(color: Color, roughness: float, metallic: float) -> StandardMaterial3D:
+	var result := StandardMaterial3D.new()
+	result.albedo_color = color
+	result.roughness = roughness
+	result.metallic = metallic
+	return result
