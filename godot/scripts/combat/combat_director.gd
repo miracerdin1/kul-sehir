@@ -7,7 +7,9 @@ const PlayerCombat = preload("res://scripts/combat/player_combat.gd")
 const CombatHud = preload("res://scripts/combat/combat_hud.gd")
 const GunModel = preload("res://scripts/combat/gun_model.gd")
 const Weapons = preload("res://scripts/combat/weapons.gd")
-const MAX_ENEMIES := 3
+const MAX_ENEMIES := 4
+# More soldiers roam the city as the days pass (spawnManager: 5 + day, at most 11).
+const ENEMY_CAP := 7
 # Patrol points along the street (x across, z along); soldiers wander between them.
 const ROUTE: Array[Vector3] = [
 	Vector3(-3, 0, -24), Vector3(3, 0, -24), Vector3(3.5, 0, -12), Vector3(-3, 0, -6),
@@ -30,6 +32,7 @@ var spawn_time := 70.0
 var spawning := false
 var condition_time := 0.0
 var rng := RandomNumberGenerator.new()
+var route: Array[Vector3] = []
 var flash_material: StandardMaterial3D
 var tracer_material: StandardMaterial3D
 var dust_material: StandardMaterial3D
@@ -39,6 +42,8 @@ var blood_material: StandardMaterial3D
 func setup(expedition: Node3D) -> void:
 	game = expedition
 	player = expedition.player
+	route = ROUTE.duplicate()
+	route.append_array(expedition.city.nodes)
 	rng.randomize()
 	combat = PlayerCombat.new()
 	add_child(combat)
@@ -71,7 +76,17 @@ func start() -> void:
 	add_pickup("bandage", 1, Vector3(-8.6, 0.28, -2.4))
 	spawn_enemy(Vector3(-2.0, 0.1, -24.0), "rifle")
 	spawn_enemy(Vector3(3.5, 0.1, -12.0), "pistol")
+	for entry: Array in game.city.loot:
+		add_pickup(entry[0], entry[1], entry[2])
+	var far: Array = game.city.nodes.filter(func(node: Vector3): return node.distance_to(player.global_position) > 42.0 and node.distance_to(player.global_position) < 100.0)
+	far.shuffle()
+	for node: Vector3 in far.slice(0, MAX_ENEMIES - 1):
+		spawn_enemy(node + Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)), "rifle" if rng.randf() < 0.7 else "pistol")
 	spawning = true
+
+
+func on_same_road(a: Vector3, b: Vector3) -> bool:
+	return game.city.on_same_road(a, b)
 
 
 func paused() -> bool:
@@ -80,7 +95,7 @@ func paused() -> bool:
 
 func spawn_enemy(at: Vector3, gun: String) -> Node:
 	var enemy := Enemy.new()
-	enemy.setup(self, player, at, ROUTE, gun)
+	enemy.setup(self, player, at, route, gun)
 	add_child(enemy)
 	enemies.append(enemy)
 	return enemy
@@ -202,8 +217,20 @@ func _physics_process(delta: float) -> void:
 		if spawn_time <= 0.0:
 			spawn_time = rng.randf_range(28.0, 50.0) if conditions.daylight < 0.3 else rng.randf_range(40.0, 75.0)
 			var alive := enemies.filter(func(enemy): return enemy.alive).size()
-			if alive < MAX_ENEMIES and player.global_position.z > -8.0:
-				spawn_enemy(Vector3(rng.randf_range(-3.0, 3.0), 0.1, -26.0), "rifle" if rng.randf() < 0.7 else "pistol")
+			var cap := mini(MAX_ENEMIES + game.street.climate.state.day_number() - 1, ENEMY_CAP)
+			if alive < cap:
+				spawn_far()
+				if rng.randf() < 0.35 and alive + 1 < cap:
+					spawn_far()
+
+
+# A new soldier walks in from a road out of sight (spawnFar).
+func spawn_far() -> void:
+	var options: Array = game.city.nodes.filter(func(node: Vector3): return node.distance_to(player.global_position) > 48.0 and node.distance_to(player.global_position) < 95.0)
+	if options.is_empty():
+		return
+	var node: Vector3 = options[rng.randi() % options.size()]
+	spawn_enemy(node + Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3)), "rifle" if rng.randf() < 0.7 else "pistol")
 
 
 func add_effect(node: Node3D, life: float) -> void:

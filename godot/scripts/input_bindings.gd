@@ -7,7 +7,7 @@ static func install() -> void:
 		"move_left": [KEY_A], "move_right": [KEY_D],
 		"sprint": [KEY_SHIFT], "walk": [KEY_ALT], "jump": [KEY_SPACE],
 		"crouch": [KEY_C, KEY_CTRL], "prone": [KEY_Z],
-		"interact": [KEY_E], "inventory": [KEY_B],
+		"interact": [KEY_E], "inventory": [KEY_B], "map": [KEY_M],
 		"flashlight": [KEY_F], "pause_game": [KEY_ESCAPE],
 		"performance": [KEY_F2], "fullscreen": [KEY_F11],
 		"reload": [KEY_R], "bandage": [KEY_H],

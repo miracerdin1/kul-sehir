@@ -63,7 +63,7 @@ func _ready() -> void:
 	marker.modulate.a = 0.0
 	weapon_label = text(root, "", 30, INK)
 	anchor_bottom_right(weapon_label, 78)
-	hints = text(root, "SOL TIK  Ateş     SAĞ TIK  Nişan     R  Doldur     1-4  Silah     H  Sargı", 15, MUTED)
+	hints = text(root, "SOL TIK  Ateş     SAĞ TIK  Nişan     R  Doldur     1-4  Silah     H  Sargı     M  Harita", 15, MUTED)
 	anchor_bottom_right(hints, 40)
 	health_label = text(root, "SAĞLIK", 15, MUTED)
 	anchor_bottom_right(health_label, 150)

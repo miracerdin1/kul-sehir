@@ -5,9 +5,13 @@ const Survivor = preload("res://scripts/survivor.gd")
 const Hud = preload("res://scripts/hud.gd")
 const InputBindings = preload("res://scripts/input_bindings.gd")
 const CombatDirector = preload("res://scripts/combat/combat_director.gd")
+const CityBuilder = preload("res://scripts/city/city_builder.gd")
+const CityMap = preload("res://scripts/city/city_map.gd")
 const PICKUP_TIME := 1.3
 
 var street: Node3D
+var city: Node3D
+var city_map: CanvasLayer
 var player: CharacterBody3D
 var hud: CanvasLayer
 var inventory: Array[String] = []
@@ -27,6 +31,9 @@ func _ready() -> void:
 	InputBindings.install()
 	street = Street.new()
 	add_child(street)
+	city = CityBuilder.new()
+	city.setup(street.surfaces)
+	add_child(city)
 	player = Survivor.new()
 	add_child(player)
 	player.position = Vector3(0, 0.1, 15)
@@ -40,6 +47,9 @@ func _ready() -> void:
 	add_child(director)
 	director.setup(self)
 	director.player_died.connect(on_player_died)
+	city_map = CityMap.new()
+	city_map.setup(city, player, street.stove_position)
+	add_child(city_map)
 	create_audio()
 	hud.show_menu(false)
 	if "--smoke-test" in OS.get_cmdline_user_args() or "--capture-qa" in OS.get_cmdline_user_args():
@@ -83,6 +93,7 @@ func start_game() -> void:
 
 func on_player_died(_cause: String) -> void:
 	dead = true
+	city_map.toggle(false)
 	paused = true
 	hud.prompt.text = ""
 
@@ -113,12 +124,16 @@ func _unhandled_input(event: InputEvent) -> void:
 		player.animation.active = false
 		hud.show_inventory(inventory + director.combat.summary())
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	if event.is_action_pressed("map") and not paused:
+		city_map.toggle()
 	if not paused and event.is_action_pressed("interact"):
 		interact()
 
 
 func pause_game() -> void:
 	paused = true
+	if city_map:
+		city_map.toggle(false)
 	player.active = false
 	player.animation.active = false
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -138,6 +153,7 @@ func toggle_quality() -> void:
 	get_viewport().scaling_3d_scale = 0.8 if low_quality else 1.0
 	get_viewport().msaa_3d = Viewport.MSAA_DISABLED if low_quality else Viewport.MSAA_2X
 	street.sun.directional_shadow_max_distance = 32.0 if low_quality else 55.0
+	city.set_low_quality(low_quality)
 	hud.quality_button.text = "GÖRÜNTÜ  /  PERFORMANS" if low_quality else "GÖRÜNTÜ  /  DENGELİ"
 
 

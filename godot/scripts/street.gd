@@ -58,10 +58,7 @@ func create_ground() -> void:
 	var paint: Material = surfaces.plain(Color("878575"))
 	for z in range(-27, 26, 6):
 		box(self, Vector3(0, 0.005, z), Vector3(0.11, 0.007, 1.8), paint, false)
-	for x in [-20.0, 20.0]:
-		AssetFactory.collider(self, Vector3(0.5, 6, 60), Vector3(x, 2, 0))
-	for z in [-29.0, 29.0]:
-		AssetFactory.collider(self, Vector3(42, 6, 0.5), Vector3(0, 2, z))
+	# The street opens onto the city (scripts/city/), which keeps the outer edge.
 
 
 func create_buildings() -> void:
@@ -72,9 +69,6 @@ func create_buildings() -> void:
 			building.position = Vector3(side * 7.0, 0.15, -22.0 + index * 11.0)
 			building.rotation.y = side * PI / 2.0
 			build_facade(building, index, side)
-	for index in range(9):
-		var brick: Material = surfaces.textured("brick_wall_001", Color("858881"), 0.28)
-		box(self, Vector3(-29 + index * 7.5, 4.0, -38.0), Vector3(6.0, rng.randf_range(7, 15), 7.0), brick, false)
 	var sign_root := Node3D.new()
 	add_child(sign_root)
 	sign_root.position = Vector3(0, 3.4, -27.8)
