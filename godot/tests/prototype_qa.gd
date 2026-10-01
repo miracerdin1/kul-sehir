@@ -112,6 +112,7 @@ func run(game: Node3D) -> void:
 	check(not game.hud.inventory_panel.visible and game.player.active, "Closing inventory resumes movement")
 	game.toggle_quality()
 	check(game.low_quality and game.get_viewport().msaa_3d == Viewport.MSAA_DISABLED, "Performance preset applies")
+	await check_city(game)
 	await check_combat(game)
 	game.ambient.stop()
 	game.player.footstep.stop()
@@ -219,6 +220,51 @@ func aim_at(game: Node3D, target: Vector3) -> void:
 		game.player.yaw = atan2(-to.x, -to.z)
 		game.player.pitch = asin(clampf(to.normalized().y, -1.0, 1.0))
 		await frames(game, 2)
+
+
+# The street opens into the city: blocks of shells, guns to find, patrol roads, a map.
+func check_city(game: Node3D) -> void:
+	var city = game.city
+	var player = game.player
+	check(city.buildings.size() >= 30, "City has enterable building shells (%d)" % city.buildings.size())
+	check(city.nodes.size() >= 30, "City has road patrol points")
+	var kinds: Array = city.loot.map(func(entry): return entry[0])
+	check("rifle" in kinds and "shotgun" in kinds and "pistol" in kinds, "Guns are hidden around the city")
+	var space: PhysicsDirectSpaceState3D = game.get_world_3d().direct_space_state
+	var walled := 0
+	for building: Rect2 in city.buildings:
+		var middle := building.get_center()
+		var query := PhysicsRayQueryParameters3D.create(Vector3(building.position.x - 2.0, 0.3, middle.y + 0.7), Vector3(middle.x, 0.3, middle.y + 0.7))
+		if not space.intersect_ray(query).is_empty():
+			walled += 1
+	check(walled > city.buildings.size() * 0.6, "Building walls block (%d / %d)" % [walled, city.buildings.size()])
+	check(city.meshes[0].visibility_range_end == city.LOW_VIEW_RANGE, "Performance preset shortens city view range")
+	player.position = Vector3(0, 0.2, 24)
+	player.velocity = Vector3.ZERO
+	player.yaw = PI
+	await frames(game, 10)
+	await hold(game, ["move_forward", "sprint"], 100)
+	check(player.position.z > 31.0, "Survivor walks out of the street onto the cross road (z %.1f)" % player.position.z)
+	player.position = Vector3(0, 0.2, 78)
+	player.velocity = Vector3.ZERO
+	await frames(game, 10)
+	await hold(game, ["move_forward", "sprint"], 150)
+	check(player.position.z < city.BOUND.y + 2.0, "City edge stops the survivor (z %.1f)" % player.position.z)
+	var event := InputEventAction.new()
+	event.action = "map"
+	event.pressed = true
+	game._unhandled_input(event)
+	check(game.city_map.visible, "M opens the city map")
+	await frames(game, 2)
+	game._unhandled_input(event)
+	check(not game.city_map.visible, "M closes the city map")
+	var walker = game.director.spawn_enemy(Vector3(44, 0.1, 33), "rifle")
+	await frames(game, 2)
+	var to_goal: Vector3 = walker.goal - walker.global_position
+	check(absf(to_goal.x) < 8.5 or absf(to_goal.z) < 8.5, "Soldier patrols along a road")
+	game.director.enemies.erase(walker)
+	walker.queue_free()
+	await frames(game, 2)
 
 
 func check_combat(game: Node3D) -> void:
@@ -352,6 +398,15 @@ func capture(game: Node3D) -> void:
 	game.player.pitch = -0.12
 	await frames(game, 100)
 	await save_frame(game, "res://qa-output/stove.png")
+	game.player.position = Vector3(2.0, 0.2, 36.0)
+	game.player.yaw = -1.2
+	game.player.pitch = 0.05
+	await frames(game, 100)
+	await save_frame(game, "res://qa-output/city.png")
+	game.city_map.toggle(true)
+	await frames(game, 5)
+	await save_frame(game, "res://qa-output/map.png")
+	game.city_map.toggle(false)
 	game.hud.show_inventory(game.inventory)
 	await frames(game, 10)
 	await save_frame(game, "res://qa-output/inventory.png")

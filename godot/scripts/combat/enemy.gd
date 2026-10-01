@@ -111,11 +111,17 @@ func pick_waypoint() -> void:
 	if waypoints.is_empty():
 		goal = global_position
 		return
+	# Nearby points further along the same road, so patrols follow the streets
+	# (pickWaypoint); off the road, walk back to the closest road point first.
 	var options: Array[Vector3] = []
+	var closest := waypoints[0]
 	for point in waypoints:
-		if point.distance_to(global_position) > 6.0:
+		var distance := point.distance_to(global_position)
+		if distance < closest.distance_to(global_position):
+			closest = point
+		if distance > 6.0 and distance < 60.0 and director.on_same_road(point, global_position):
 			options.append(point)
-	goal = (options if not options.is_empty() else waypoints)[rng.randi() % (options.size() if not options.is_empty() else waypoints.size())]
+	goal = options[rng.randi() % options.size()] if not options.is_empty() else closest
 	goal += Vector3(rng.randf_range(-2, 2), 0, rng.randf_range(-2, 2))
 
 
