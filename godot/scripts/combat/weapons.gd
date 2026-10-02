@@ -3,6 +3,7 @@ extends RefCounted
 # (per pellet for the shotgun), rate is seconds between shots, spread is radians.
 
 const DATA := {
+	"rpg": {"name": "RPG", "damage": 180.0, "rate": 1.0, "spread": 0.0, "ammo": "rockets", "mag": 1, "reload": 2.6, "noise": 75.0, "kick": 0.035, "pose": "AimRifle", "rocket": true},
 	"fists": {"name": "YUMRUK", "melee": true, "damage": 14.0, "range": 1.9, "rate": 0.5},
 	"knife": {"name": "BIÇAK", "melee": true, "damage": 48.0, "range": 2.2, "rate": 0.42},
 	"pistol": {"name": "TABANCA", "damage": 34.0, "rate": 0.3, "spread": 0.01, "ammo": "ammo9",
@@ -13,11 +14,12 @@ const DATA := {
 		"mag": 30, "reload": 2.2, "noise": 80.0, "kick": 0.008, "pose": "AimRifle", "auto": true},
 }
 const NAMES := {
+	"rpg": "RPG", "rockets": "Roket", "mine": "Mayın",
 	"knife": "Bıçak", "pistol": "Tabanca", "shotgun": "Pompalı tüfek", "rifle": "Tüfek",
 	"ammo9": "9mm mermi", "ammo762": "7.62 mermi", "shell": "Av fişeği", "bandage": "Sargı bezi",
 	"food": "Konserve", "water": "Su şişesi",
 }
-const GUNS := ["pistol", "shotgun", "rifle"]
+const GUNS := ["pistol", "shotgun", "rifle", "rpg"]
 
 
 static func is_gun(weapon: String) -> bool:

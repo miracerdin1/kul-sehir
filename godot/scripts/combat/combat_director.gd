@@ -2,6 +2,8 @@ extends Node3D
 # Runs the fight: spawns and tracks soldiers, weapon pickups and bodies, routes
 # noise and damage, and draws the short-lived effects (flash, tracer, impact).
 
+const Explosives = preload("res://scripts/combat/armor/explosives.gd")
+
 const Enemy = preload("res://scripts/combat/enemy.gd")
 const PlayerCombat = preload("res://scripts/combat/player_combat.gd")
 const CombatHud = preload("res://scripts/combat/combat_hud.gd")
@@ -26,6 +28,7 @@ signal player_died(cause: String)
 
 var game: Node3D
 var player: CharacterBody3D
+var explosives: Node3D
 var combat: PlayerCombat
 var hud: CombatHud
 var enemies: Array = []
@@ -55,6 +58,9 @@ func setup(expedition: Node3D) -> void:
 	combat = PlayerCombat.new()
 	add_child(combat)
 	combat.setup(player, self)
+	explosives = Explosives.new()
+	explosives.director = self
+	add_child(explosives)
 	combat.message.connect(say)
 	hud = CombatHud.new()
 	add_child(hud)
@@ -77,6 +83,9 @@ func glow(color: Color, unshaded := true) -> StandardMaterial3D:
 
 # First entry into the street: the pistol by the stove, a knife, and two soldiers at the far end.
 func start() -> void:
+	add_pickup("rpg", 3, Vector3(-4.3, 0.16, 11.8))
+	add_pickup("mine", 3, Vector3(-4.3, 0.16, 10.6))
+	add_pickup("rockets", 3, Vector3(-4.3, 0.16, 13.1))
 	add_pickup("pistol", 6, Vector3(-5.7, 0.16, 12.2))
 	add_pickup("ammo9", 12, Vector3(-6.2, 0.16, 12.9))
 	add_pickup("knife", 1, Vector3(5.6, 0.16, 9.5))
@@ -110,7 +119,7 @@ func spawn_enemy(at: Vector3, gun: String) -> Node:
 
 func add_pickup(kind: String, amount: int, at: Vector3) -> Dictionary:
 	var node: Node3D
-	if kind in ["pistol", "rifle", "shotgun", "knife"]:
+	if Weapons.is_gun(kind) or kind == "knife":
 		node = GunModel.build(kind)
 		node.rotation = Vector3(0, rng.randf_range(0, TAU), PI / 2.0)
 		node.position = at + Vector3(0, 0.04, 0)
@@ -133,11 +142,11 @@ func add_pickup(kind: String, amount: int, at: Vector3) -> Dictionary:
 func pickup_mesh(kind: String) -> Mesh:
 	if not pickup_looks.has(kind):
 		var mesh: PrimitiveMesh
-		if kind == "water":
+		if kind in ["water", "mine"]:
 			var bottle := CylinderMesh.new()
-			bottle.top_radius = 0.035
-			bottle.bottom_radius = 0.05
-			bottle.height = 0.3
+			bottle.top_radius = 0.22 if kind == "mine" else 0.035
+			bottle.bottom_radius = 0.22 if kind == "mine" else 0.05
+			bottle.height = 0.09 if kind == "mine" else 0.3
 			bottle.radial_segments = 10
 			mesh = bottle
 		else:
@@ -183,7 +192,7 @@ func use(interaction: Dictionary) -> void:
 			say("Zaten bir bıçağın var." if entry.kind == "knife" else "Buna ihtiyacın yok.")
 			return
 		entry.taken = true
-		say("Aldın: " + Weapons.label(entry.kind, entry.amount) + (" · 1-4 tuşlarıyla silah değiştir" if Weapons.is_gun(entry.kind) else ""))
+		say("Aldın: " + Weapons.label(entry.kind, entry.amount) + (" · 1-5 tuşlarıyla silah değiştir" if Weapons.is_gun(entry.kind) else ""))
 	elif interaction.has("body"):
 		var enemy: Node = interaction.body
 		enemy.searched = true

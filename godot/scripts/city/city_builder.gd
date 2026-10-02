@@ -3,6 +3,9 @@ extends Node3D
 # blocks with enterable building shells, rubble, wrecks, sandbags and loot, out
 # to a ring of collapsed blocks. street.gd keeps the first street in the middle.
 
+const ArmoredVehicle = preload("res://scripts/combat/armor/armored_vehicle.gd")
+const ARMOR_POSITIONS := [Vector3(0, 0, 43), Vector3(44, 0, 20), Vector3(-44, 0, -48), Vector3(70, 0, 33)]
+
 const AssetFactory = preload("res://scripts/asset_factory.gd")
 const BoxBatch = preload("res://scripts/city/box_batch.gd")
 const WindowBatch = preload("res://scripts/city/window_batch.gd")
@@ -563,6 +566,8 @@ func road_point() -> Vector3:
 			point = Vector3(pick(ROADS_X) + rng.randf_range(-4, 4), 0, rng.randf_range(-BOUND.y + 6.0, BOUND.y - 6.0))
 		else:
 			point = Vector3(along, 0, pick(ROADS_Z) + rng.randf_range(-4, 4))
+		if ARMOR_POSITIONS.any(func(at): return at.distance_to(point) < 8.0):
+			continue
 		if not STREET_AREA.grow(3.0).has_point(Vector2(point.x, point.z)):
 			return point
 	return Vector3(ROADS_X[0], 0, ROADS_Z[0])
@@ -590,9 +595,13 @@ func create_street_props() -> void:
 		var at := road_point()
 		var radius := rng.randf_range(1.5, 3.5)
 		batch.add(materials.scorch, local(chunk, at + Vector3(0, 0.012, 0)), Vector3(radius * 2.0, 0.01, radius * 1.6), rng.randf_range(0, TAU))
-	for index in range(2):
-		var at := road_point()
-		tank(batch, body, chunk, at, rng.randf_range(0, TAU))
+	for index in range(ARMOR_POSITIONS.size()):
+		var at: Vector3 = ARMOR_POSITIONS[index]
+		var vehicle := ArmoredVehicle.new()
+		vehicle.kind = "tank" if index % 2 == 0 else "apc"
+		add_child(vehicle)
+		vehicle.position = at
+		vehicle.rotation.y = PI / 2.0 if index == 3 else 0.0
 		loot.append(["ammo762", rng.randi_range(10, 20), at + Vector3(rng.randf_range(-4, 4), 0.02, 4.5)])
 	# Spread over the whole map, so this mesh has no view range.
 	meshes.append_array(batch.commit(chunk, 0.0))
@@ -605,17 +614,6 @@ func burnt_car(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, at: Vector3, 
 	batch.add(materials.metal, local(chunk, at + basis * Vector3(-0.2, 1.35, 0)), Vector3(2.1, 0.6, 1.65), yaw, 0.9)
 	for wheel in [Vector2(-1.3, 0.95), Vector2(1.3, 0.95), Vector2(-1.3, -0.95), Vector2(1.3, -0.95)]:
 		batch.add(materials.dark, local(chunk, at + basis * Vector3(wheel.x, 0.35, wheel.y)), Vector3(0.7, 0.7, 0.25), yaw, 0.6)
-
-
-func tank(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, at: Vector3, yaw: float) -> void:
-	var basis := Basis(Vector3.UP, yaw)
-	batch.add(materials.metal, local(chunk, at + Vector3(0, 1.1, 0)), Vector3(7, 1.3, 3.4), yaw, 1.2)
-	solid(body, chunk, at + Vector3(0, 1.1, 0), Vector3(7, 2.2, 3.4), yaw)
-	for track in [1.9, -1.9]:
-		batch.add(materials.dark, local(chunk, at + basis * Vector3(0, 0.6, track)), Vector3(7.4, 1.1, 0.8), yaw)
-	batch.add(materials.metal, local(chunk, at + basis * Vector3(-0.5, 2.2, 0)), Vector3(3, 0.9, 2.6), yaw + 0.35, 1.1)
-	var turret := Basis(Vector3.UP, yaw + 0.35)
-	batch.add(materials.dark, local(chunk, at + basis * Vector3(-0.5, 0, 0) + turret * Vector3(-2.7, 2.15, 0)), Vector3(4.0, 0.22, 0.22), yaw + 0.35, 1.0, Vector2(0, -0.12))
 
 
 func sandbags(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, at: Vector3, yaw: float, length: float) -> void:

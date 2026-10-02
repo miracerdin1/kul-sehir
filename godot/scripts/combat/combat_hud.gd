@@ -63,7 +63,7 @@ func _ready() -> void:
 	marker.modulate.a = 0.0
 	weapon_label = text(root, "", 30, INK)
 	anchor_bottom_right(weapon_label, 78)
-	hints = text(root, "SOL TIK  Ateş     SAĞ TIK  Nişan     R  Doldur     1-4  Silah     H  Sargı     M  Harita", 15, MUTED)
+	hints = text(root, "SOL TIK  Ateş     SAĞ TIK  Nişan     R  Doldur     1-5  Silah     G  Mayın     H  Sargı", 15, MUTED)
 	anchor_bottom_right(hints, 40)
 	health_label = text(root, "SAĞLIK", 15, MUTED)
 	anchor_bottom_right(health_label, 150)
@@ -171,6 +171,8 @@ func _process(delta: float) -> void:
 			weapon_label.text += "   DOLDURULUYOR"
 	if combat.bandages > 0:
 		weapon_label.text += "   ·   SARGI %d" % combat.bandages
+	if combat.mines > 0:
+		weapon_label.text += "   ·   MAYIN %d" % combat.mines
 	health_bar.value = player.hp
 	health_label.text = "SAĞLIK" + ("   KANAMA" if player.bleeding else "")
 	health_label.add_theme_color_override("font_color", RED if player.bleeding else MUTED)

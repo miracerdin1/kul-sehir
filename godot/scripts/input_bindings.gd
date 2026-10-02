@@ -10,6 +10,7 @@ static func install() -> void:
 		"interact": [KEY_E], "inventory": [KEY_B], "map": [KEY_M],
 		"flashlight": [KEY_F], "pause_game": [KEY_ESCAPE],
 		"performance": [KEY_F2], "fullscreen": [KEY_F11],
+		"weapon_5": [KEY_5], "place_mine": [KEY_G],
 		"reload": [KEY_R], "bandage": [KEY_H],
 		"weapon_1": [KEY_1], "weapon_2": [KEY_2], "weapon_3": [KEY_3], "weapon_4": [KEY_4],
 	}
