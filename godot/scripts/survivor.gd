@@ -3,6 +3,7 @@ extends CharacterBody3D
 const AssetFactory = preload("res://scripts/asset_factory.gd")
 const ArmedBody = preload("res://scripts/combat/armed_body.gd")
 const Weapons = preload("res://scripts/combat/weapons.gd")
+const Footsteps = preload("res://scripts/footsteps.gd")
 # Speeds follow the HTML reference (jog 3.5, sprint 6.4, crouch and prone slower),
 # tuned so each clip plays near its natural pace and the feet do not slide.
 const WALK_SPEED := 1.6
@@ -52,6 +53,7 @@ var pitch := -0.13
 var camera_height := 1.5
 var step_distance := 0.0
 var footstep: AudioStreamPlayer3D
+var gear: AudioStreamPlayer3D
 var exhausted := false
 var sprinting := false
 var air_time := 0.0
@@ -107,10 +109,14 @@ func _ready() -> void:
 			animation.advance(0.0)
 	create_camera()
 	footstep = AudioStreamPlayer3D.new()
-	footstep.stream = load("res://assets/audio/footstep.wav")
+	footstep.stream = Footsteps.step()
 	footstep.volume_db = -13.0
-	footstep.max_distance = 12.0
+	footstep.max_distance = 15.0
 	add_child(footstep)
+	gear = AudioStreamPlayer3D.new()
+	gear.stream = Footsteps.gear()
+	gear.max_distance = 12.0
+	add_child(gear)
 
 
 func create_camera() -> void:
@@ -270,9 +276,13 @@ func _physics_process(delta: float) -> void:
 		step_distance += ground_speed * delta
 		if step_distance > stride_length():
 			step_distance = 0.0
-			footstep.volume_db = -19.0 if stance != "stand" else -13.0
-			footstep.pitch_scale = randf_range(0.85, 1.1)
-			footstep.play()
+			var gait := "sneak" if stance != "stand" else ("sprint" if motion == "Sprint" else ("run" if motion == "Run" else "walk"))
+			Footsteps.play(footstep, gait)
+			# Kit jostles on every other running stride.
+			if gait in ["run", "sprint"] and randf() < 0.55:
+				gear.volume_db = -20.0 if gait == "run" else -15.0
+				gear.pitch_scale = randf_range(0.9, 1.1)
+				gear.play()
 	update_animation(ground_speed, delta)
 	if armed and armed.rig:
 		animation.advance(delta)
@@ -404,8 +414,7 @@ func end_vault() -> void:
 	motion = ""
 	if animation:
 		animation.speed_scale = 1.0
-	footstep.volume_db = -10.0
-	footstep.play()
+	Footsteps.play(footstep, "run", -1.0)
 
 
 func vaulting() -> bool:

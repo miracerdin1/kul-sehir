@@ -2,7 +2,8 @@
 
     python tools/make_sounds.py
 
-Writes godot/assets/audio/glass_break_1..3.ogg and godot/assets/audio/tank_engine.ogg.
+Writes godot/assets/audio/glass_break_1..3.ogg, tank_engine.ogg, footstep_1..6.ogg (boots on
+gritty concrete), gear_rattle.ogg (kit jostling while running), tank_cannon.ogg and heavy_mg.ogg.
 Pure Python with fixed seeds; ffmpeg (with libvorbis) turns the WAVs into Ogg, which
 stays out of Git LFS (*.wav is LFS-tracked in this repo).
 """
@@ -148,9 +149,112 @@ def engine():
     return out
 
 
+def footstep(seed):
+    """A boot on ash-covered concrete: heel strike, the sole rolling down a few
+    centiseconds later, and the grit underfoot crunching between them."""
+    rng = random.Random(seed)
+    length = int(RATE * 0.32)
+    noise = [rng.uniform(-1, 1) for _ in range(length)]
+    thud = biquad(biquad(noise, "low", 520, 0.7), "low", 520, 0.7)
+    scuff = biquad(biquad(noise, "band", rng.uniform(1600, 2600), 0.8), "high", 700, 0.7)
+    out = [0.0] * length
+    toe = rng.uniform(0.045, 0.075)
+    low = rng.uniform(85, 120)
+    for index in range(length):
+        t = index / RATE
+        heel = math.exp(-t / 0.011) * min(1.0, t / 0.0008)
+        out[index] += thud[index] * heel * 2.4 + math.sin(2 * math.pi * low * t) * heel * 0.35
+        if t >= toe:
+            u = t - toe
+            roll = math.exp(-u / 0.014) * min(1.0, u / 0.002)
+            out[index] += thud[index] * roll * 1.3
+        out[index] += scuff[index] * math.exp(-t / 0.045) * min(1.0, t / 0.004) * 0.32
+    # Grit: tiny bright crackles while the weight comes down.
+    for _ in range(rng.randint(14, 24)):
+        first = int(rng.uniform(0.0, 0.13) * RATE)
+        tone = rng.uniform(2500, 7000)
+        level = rng.uniform(0.03, 0.12)
+        for offset in range(int(0.006 * RATE)):
+            index = first + offset
+            if index >= length:
+                break
+            t = offset / RATE
+            out[index] += (noise[(index * 7) % length] * 0.6 + math.sin(2 * math.pi * tone * t) * 0.4) * math.exp(-t / 0.0012) * level
+    fade = int(0.04 * RATE)
+    for index in range(fade):
+        out[length - 1 - index] *= index / fade
+    return out
+
+
+def gear_rattle(seed):
+    """Webbing, magazines and a canteen jostling: a few soft knocks and metal ticks."""
+    rng = random.Random(seed)
+    length = int(RATE * 0.25)
+    out = [0.0] * length
+    noise = [rng.uniform(-1, 1) for _ in range(length)]
+    cloth = biquad(noise, "band", 900, 0.6)
+    for index in range(length):
+        t = index / RATE
+        out[index] += cloth[index] * math.exp(-t / 0.06) * min(1.0, t / 0.01) * 0.25
+    for _ in range(rng.randint(3, 6)):
+        first = int(rng.uniform(0.0, 0.12) * RATE)
+        tone = rng.uniform(1800, 4200)
+        for offset in range(int(0.03 * RATE)):
+            index = first + offset
+            if index >= length:
+                break
+            t = offset / RATE
+            out[index] += (math.sin(2 * math.pi * tone * t) + 0.4 * math.sin(2 * math.pi * tone * 2.4 * t)) * math.exp(-t / 0.006) * rng.uniform(0.08, 0.2)
+    return out
+
+
+def cannon():
+    """A tank gun: a hard supersonic crack, a deep boom and the report rolling off
+    the buildings for a second and a half."""
+    rng = random.Random(77)
+    length = int(RATE * 2.2)
+    noise = [rng.uniform(-1, 1) for _ in range(length)]
+    low = biquad(biquad(noise, "low", 180, 0.7), "low", 180, 0.7)
+    mid = biquad(noise, "low", 1400, 0.7)
+    out = [0.0] * length
+    for index in range(length):
+        t = index / RATE
+        out[index] += noise[index] * math.exp(-t / 0.004) * 1.2
+        out[index] += mid[index] * math.exp(-t / 0.06) * 1.6
+        out[index] += low[index] * math.exp(-t / 0.35) * min(1.0, t / 0.004) * 9.0
+        out[index] += math.sin(2 * math.pi * 48 * t) * math.exp(-t / 0.18) * 0.8
+    for delay, gain in ((0.09, 0.35), (0.21, 0.25), (0.38, 0.18), (0.62, 0.12)):
+        step = int(delay * RATE)
+        for index in range(length - 1, step - 1, -1):
+            out[index] += low[index - step] * math.exp(-(index - step) / RATE / 0.3) * gain * 6.0
+    fade = int(0.3 * RATE)
+    for index in range(fade):
+        out[length - 1 - index] *= index / fade
+    return out
+
+
+
+def machine_gun():
+    """One round from a heavy machine gun: sharp crack, short boom, quick tail."""
+    rng = random.Random(31)
+    length = int(RATE * 0.45)
+    noise = [rng.uniform(-1, 1) for _ in range(length)]
+    low = biquad(noise, "low", 300, 0.7)
+    out = [0.0] * length
+    for index in range(length):
+        t = index / RATE
+        out[index] = noise[index] * math.exp(-t / 0.003) + low[index] * math.exp(-t / 0.07) * 4.0 * min(1.0, t / 0.002)
+    return out
+
+
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     for number, seed in enumerate((11, 23, 37), start=1):
         write("glass_break_%d.ogg" % number, glass(seed))
     write("tank_engine.ogg", engine())
-    print("Wrote glass_break_1..3.ogg and tank_engine.ogg to " + str(OUT))
+    for number in range(1, 7):
+        write("footstep_%d.ogg" % number, footstep(100 + number))
+    write("gear_rattle.ogg", gear_rattle(5))
+    write("tank_cannon.ogg", cannon())
+    write("heavy_mg.ogg", machine_gun())
+    print("Wrote glass_break_1..3, tank_engine, footstep_1..6, gear_rattle, tank_cannon and heavy_mg (.ogg) to " + str(OUT))
