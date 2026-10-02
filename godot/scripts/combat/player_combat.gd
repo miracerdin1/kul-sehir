@@ -39,10 +39,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		attack()
 	elif event.is_action_released("fire"):
 		trigger_held = false
-	if event.is_action_pressed("aim"):
-		aim_held = true
-	elif event.is_action_released("aim"):
-		aim_held = false
+	# Right click toggles aiming: one click raises the sights, the next lowers them.
+	if event.is_action_pressed("aim") and not event.is_echo():
+		aim_held = not aim_held
 	if event.is_action_pressed("reload"):
 		reload()
 	if event.is_action_pressed("bandage"):

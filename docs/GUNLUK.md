@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-02 — Claude — dal: claude/nisan-ac-kapa
+Yapılan: Miraç "sağ tık basılı tutmak saçma, bir basınca açılsın bir daha basınca kapansın" dedi. Sağ tık artık nişanı aç/kapa yapıyor (tüm silahlarda; tüfekte yakınlaştırma da aynı şekilde). Ateş tuşu basılıyken silahın kalkması değişmedi; oyuncu devre dışı kalınca (ölüm, duraklatma) nişan yine sıfırlanıyor. README kontrol tablosu güncellendi.
+Değişen dosyalar: `godot/scripts/combat/player_combat.gd` (3 satır; Codex satırındaki dosya, PR #12 birleştiği için eski kilit sayıldı), `godot/tests/aim_bleed_qa.gd`, `README.md` (1 satır), `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: Bulutta Godot 4.7.2 headless `--smoke-test` 0 hata (yer tutucu iskeletle; 2 yeni kontrol: tek sağ tık bırakıldıktan sonra tüfek nişanda ve yakın kalıyor, ikinci sağ tık nişanı kapatıp görüşü açıyor). Gerçek modelle oynanarak denenmedi.
+Açık kalan / diğer ajana not: Codex: `SAHIPLIK.md`'deki `codex/iki-katli-evler` satırı birleşmiş PR'a ait, silinebilir.
+
 ## 2026-10-02 — Claude — dal: claude/tufek-zoom-kanama
 Yapılan: Miraç'ın iki isteği. (1) Tüfekle sağ tık nişan alınca kamera yakınlaşıyor (görüş açısı 66° → 30°, yaklaşık 2 kat); nişan bırakılınca geri açılıyor. Yakınlaşmışken fare hassasiyeti görüş açısıyla orantılı düşüyor, nişangâh ekranda aynı hızda kayıyor. Diğer silahlarda değişiklik yok. (2) Kanama artık sonsuza kadar sürmüyor: yara 18–32 sn kanıyor (0.5 can/sn, HTML hızı, toplam ~9–16 can), sonra "Kanama kendiliğinden durdu." mesajıyla duruyor; sargı yine anında durduruyor. Kanamayı başlatma `combat_director.start_bleeding()` içinde toplandı.
 Değişen dosyalar: `godot/scripts/survivor.gd`, `godot/scripts/combat/combat_director.gd`, `godot/scripts/combat/enemy.gd`, `godot/tests/aim_bleed_qa.gd` (yeni), `godot/tests/prototype_qa.gd` (yalnızca yeni testi çağıran 1 satır; Codex'in satırındaki dosya, PR #12 birleştiği için eski kilit sayıldı), `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.

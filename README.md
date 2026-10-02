@@ -20,7 +20,7 @@ Yeni klondan sonra aşağıdaki hazırlık komutlarını çalıştır. Godot ça
 | Z | Yere yat / kalk |
 | Boşluk | Zıpla (çömelik veya yatıkken ayağa kalk) |
 | E | Yakındaki malzemeyi veya silahı al, cesedi ara, kapıyı aç/kapat, sobayı kullan |
-| Sağ tık (basılı) | Nişan al |
+| Sağ tık | Nişan al / bırak (tüfekte yakınlaştırır) |
 | Sol tık | Ateş et / bıçak veya yumruk; camları kır |
 | R | Şarjör değiştir |
 | 1 – 4 | Silah seç (yumruk, bıçak, tabanca/pompalı, tüfek) |
