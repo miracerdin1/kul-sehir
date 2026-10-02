@@ -2,8 +2,10 @@ extends AnimatableBody3D
 # A T-72-style tank or a BTR-style eight-wheeled APC. Built from primitive meshes merged
 # per part (hull, turret, gun, wheels, track links). City vehicles patrol the road grid:
 # they drive between junctions, take corners in an arc (the tank pivots on the spot for
-# sharp turns), stop for people and other vehicles in their way, and the tank's turret
-# sweeps the street and follows the survivor when it can see him.
+# sharp turns) and stop for people and other vehicles in their way. The turret sweeps
+# the street; when the crew sees the survivor the vehicle halts, swings the turret onto
+# him and opens fire: the tank with its main gun (an explosive shell) and coaxial
+# machine gun, the APC with its heavy machine gun.
 
 const CityBuilder = preload("res://scripts/city/city_builder.gd")
 
@@ -23,6 +25,11 @@ const APC_WHEEL_X := 1.3
 # Normal deceleration; hard braking for something in the way is 1.6x this.
 const BRAKE := 3.5
 const ENGINE_SOUND := "res://assets/audio/tank_engine.ogg"
+const CANNON_SOUND := "res://assets/audio/tank_cannon.ogg"
+const MG_SOUND := "res://assets/audio/heavy_mg.ogg"
+const SIGHT_RANGE := 70.0
+const CANNON_RANGE := Vector2(10.0, 70.0)
+const MG_RANGE := 50.0
 # The first street (x = 0 between the two cross roads) is too narrow for armour.
 const BLOCKED_EDGE := [Vector2i(2, 1), Vector2i(2, 2)]
 
@@ -55,6 +62,14 @@ var turret_time := 0.0
 var sight_time := 0.0
 var sees_player := false
 var track_dirty := true
+var cannon_wait := 0.0
+var mg_wait := 0.0
+var mg_burst := 0
+var warned := false
+var cannon_shots := 0
+var mg_shots := 0
+var shots: AudioStreamPlayer3D
+var rng := RandomNumberGenerator.new()
 
 
 func _ready() -> void:
@@ -437,6 +452,11 @@ func build_apc() -> void:
 # Engine, exhaust ----------------------------------------------------------------------
 
 func add_engine(exhaust_x: float, exhaust_z: float) -> void:
+	rng.randomize()
+	shots = AudioStreamPlayer3D.new()
+	shots.unit_size = 14.0
+	shots.max_distance = 160.0
+	add_child(shots)
 	engine = AudioStreamPlayer3D.new()
 	var stream: AudioStream = load(ENGINE_SOUND)
 	engine.stream = stream
@@ -503,6 +523,8 @@ func _physics_process(delta: float) -> void:
 		start_route()
 	var tank := kind == "tank"
 	var max_speed := 4.8 if tank else 6.5
+	aim_turret(delta)
+	fire(delta)
 	var turn_rate := 0.6 if tank else 0.5
 	var target := node_point(to_node)
 	var to_target := target - global_position
@@ -527,7 +549,12 @@ func _physics_process(delta: float) -> void:
 		target_speed = maxf(target_speed, 1.6)
 		turn *= clampf(speed / 2.0, 0.0, 1.0)
 	var braking := false
-	if not turning_round and something_ahead(max_speed):
+	# Engaging the survivor: halt and fight from where it stands.
+	if sees_player:
+		target_speed = 0.0
+		turn = 0.0
+		braking = true
+	elif not turning_round and something_ahead(max_speed):
 		target_speed = 0.0
 		braking = true
 		turn = 0.0
@@ -556,7 +583,6 @@ func _physics_process(delta: float) -> void:
 		track_dirty = true
 	engine.pitch_scale = (0.8 if tank else 1.15) + absf(speed) / max_speed * 0.45 + absf(turn / maxf(delta, 0.0001)) * 0.15
 	engine.volume_db = -6.0 + absf(speed) / max_speed * 4.0
-	aim_turret(delta)
 	if track_dirty and near_camera():
 		update_running_gear()
 
@@ -657,12 +683,19 @@ func aim_turret(delta: float) -> void:
 	if sight_time <= 0.0:
 		sight_time = 0.5
 		sees_player = false
-		if player.get("alive") and player.global_position.distance_to(global_position) < 55.0:
+		var distance := player.global_position.distance_to(global_position)
+		if player.get("alive") and distance < SIGHT_RANGE:
 			var eye := turret.global_position + Vector3.UP * 0.9
 			var query := PhysicsRayQueryParameters3D.create(eye, player.global_position + Vector3.UP * 1.2)
 			query.exclude = [get_rid()]
 			var hit := get_world_3d().direct_space_state.intersect_ray(query)
 			sees_player = hit.is_empty() or hit.collider == player
+		if sees_player and not warned:
+			warned = true
+			cannon_wait = maxf(cannon_wait, 3.0)
+			director.say(("Tank" if kind == "tank" else "ZPT") + " seni gördü! Siper al!")
+		elif warned and distance > SIGHT_RANGE + 20.0:
+			warned = false
 	var wanted := sin(turret_time * 0.25) * 0.9
 	var pitch := 0.0
 	if sees_player:
@@ -701,6 +734,110 @@ func update_running_gear() -> void:
 			var distance := fposmod(link * track_length / count + shift, track_length)
 			var point := track_points[mini(samples - 1, int(distance / 0.02))]
 			tracks.multimesh.set_instance_transform(side_index * count + link, Transform3D(Basis(Vector3.RIGHT, point.z), Vector3(x, point.y, point.x)))
+
+
+# Firing --------------------------------------------------------------------------------
+
+# How far the turret still has to swing to bear on the survivor (radians).
+func lay_error() -> float:
+	var local := to_local(director.player.global_position)
+	return absf(wrapf(atan2(-local.x, -local.z) - turret.rotation.y, -PI, PI))
+
+
+func fire(delta: float) -> void:
+	cannon_wait -= delta
+	mg_wait -= delta
+	if not sees_player or turret == null or not director.player.alive:
+		mg_burst = 0
+		return
+	var distance: float = director.player.global_position.distance_to(global_position)
+	var error := lay_error()
+	if kind == "tank" and cannon_wait <= 0.0 and error < 0.05 and distance > CANNON_RANGE.x and distance < CANNON_RANGE.y:
+		fire_cannon(distance)
+		return
+	if mg_wait <= 0.0 and error < 0.2 and distance < MG_RANGE:
+		fire_machine_gun(distance)
+
+
+func muzzle() -> Vector3:
+	return gun.global_transform * (Vector3(0, 0, -5.05) if kind == "tank" else Vector3(0, 0, -2.05))
+
+
+# One shell: it flies straight to whatever it meets first along the line of fire,
+# usually close to the survivor, and bursts there.
+func fire_cannon(distance: float) -> void:
+	cannon_wait = rng.randf_range(6.5, 9.5)
+	var player: Node3D = director.player
+	var from := muzzle()
+	var spread := 0.6 + distance * 0.035
+	if Vector2(player.velocity.x, player.velocity.z).length() > 0.5:
+		spread += 1.4
+	var aim: Vector3 = player.global_position + Vector3.UP * 0.9 + Vector3(rng.randf_range(-spread, spread), rng.randf_range(-0.4, 0.4), rng.randf_range(-spread, spread))
+	var direction := (aim - from).normalized()
+	var query := PhysicsRayQueryParameters3D.create(from, from + direction * 160.0)
+	query.exclude = [get_rid()]
+	var hit := get_world_3d().direct_space_state.intersect_ray(query)
+	var impact: Vector3 = from + direction * 160.0 if hit.is_empty() else hit.position
+	director.tracer(from, impact)
+	director.muzzle_flash(from)
+	# A direct hit kills; a near miss a couple of metres off still hurts badly.
+	var own: Array[RID] = [get_rid()]
+	director.explosives.explode(impact - direction * 0.3, 110.0, 5.5, own)
+	cannon_shots += 1
+	report(CANNON_SOUND, from, 4.0)
+	# Recoil: the barrel slams back and runs out again.
+	var recoil := gun.create_tween()
+	recoil.tween_property(gun, "position:z", gun.position.z + 0.4, 0.05)
+	recoil.tween_property(gun, "position:z", gun.position.z, 0.6).set_trans(Tween.TRANS_SINE)
+	director.alert_noise(global_position, 120.0)
+
+
+# Machine gun bursts, like a soldier's rifle but heavier and less precise.
+func fire_machine_gun(distance: float) -> void:
+	if mg_burst <= 0:
+		mg_burst = rng.randi_range(4, 8)
+	mg_burst -= 1
+	mg_shots += 1
+	mg_wait = 0.11 if mg_burst > 0 else rng.randf_range(1.4, 2.6)
+	var player: Node3D = director.player
+	var from := muzzle() if kind != "tank" else gun.global_transform * Vector3(0.3, 0.05, -1.5)
+	director.muzzle_flash(from)
+	var accuracy := 0.5 - distance * 0.008
+	if Vector2(player.velocity.x, player.velocity.z).length() > 0.3:
+		accuracy -= 0.15
+	if player.stance == "crouch":
+		accuracy -= 0.1
+	elif player.stance == "prone":
+		accuracy -= 0.2
+	accuracy = clampf(accuracy, 0.05, 0.6)
+	var target: Vector3 = player.global_position + Vector3(0, player.camera_height * 0.8, 0)
+	if rng.randf() < accuracy:
+		director.tracer(from, target)
+		var heavy := kind == "apc"
+		director.hurt_player(rng.randf_range(12.0, 20.0) if heavy else rng.randf_range(8.0, 13.0), "Makineli ateşi", global_position)
+		if rng.randf() < 0.3 and not player.bleeding:
+			director.start_bleeding()
+	else:
+		target += Vector3(rng.randf_range(-2.0, 2.0), rng.randf_range(-0.6, 1.4), rng.randf_range(-2.0, 2.0))
+		director.tracer(from, target)
+	if shots.stream == null or shots.stream.resource_path != MG_SOUND:
+		shots.stream = load(MG_SOUND)
+	shots.global_position = from
+	shots.volume_db = 0.0
+	shots.pitch_scale = rng.randf_range(0.95, 1.05)
+	shots.play()
+	director.alert_noise(global_position, 60.0)
+
+
+func report(path: String, at: Vector3, loudness: float) -> void:
+	var sound := AudioStreamPlayer3D.new()
+	sound.stream = load(path)
+	sound.unit_size = 25.0
+	sound.max_distance = 260.0
+	sound.volume_db = loudness
+	director.add_effect(sound, 2.3)
+	sound.global_position = at
+	sound.play()
 
 
 # Damage -------------------------------------------------------------------------------

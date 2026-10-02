@@ -1,10 +1,13 @@
 extends CharacterBody3D
 # A soldier carried over from the HTML reference (spawnEnemy, enemySees, updateEnemy,
 # enemyShoot): patrols between waypoints, notices the survivor by sight or noise,
-# hunts the last known position and fires in bursts.
+# hunts the last known position and fires in bursts. Once the city's walkable area is
+# baked, soldiers follow paths through doorways and up stairs: patrols sometimes sweep
+# a house, and a hunt follows the survivor inside. They open closed doors on the way.
 
 const AssetFactory = preload("res://scripts/asset_factory.gd")
 const ArmedBody = preload("res://scripts/combat/armed_body.gd")
+const Footsteps = preload("res://scripts/footsteps.gd")
 const CLIP_SPEED := {"Walk": 1.65, "Run": 3.0}
 const PATROL_SPEED := 1.5
 const INVESTIGATE_SPEED := 2.7
@@ -41,6 +44,11 @@ var motion := ""
 var last_position := Vector3.ZERO
 var frame_moved := 0.0
 var rng := RandomNumberGenerator.new()
+var steps: AudioStreamPlayer3D
+var gear: AudioStreamPlayer3D
+var step_distance := 0.0
+var agent: NavigationAgent3D
+var door_check := 0.0
 
 
 func setup(combat_director: Node, survivor: CharacterBody3D, at: Vector3, route: Array[Vector3], gun: String) -> void:
@@ -82,6 +90,25 @@ func _ready() -> void:
 	armed = ArmedBody.new(animation, model, visual)
 	armed.set_weapon(weapon)
 	visual.rotation.y = rng.randf_range(-PI, PI)
+	# Boots you can hear coming: a walking patrol from about 20 m, a running one further.
+	steps = AudioStreamPlayer3D.new()
+	steps.position.y = 0.1
+	steps.unit_size = 4.0
+	steps.max_distance = 38.0
+	add_child(steps)
+	gear = AudioStreamPlayer3D.new()
+	gear.position.y = 1.0
+	gear.stream = Footsteps.gear()
+	gear.unit_size = 3.0
+	gear.max_distance = 22.0
+	add_child(gear)
+	agent = NavigationAgent3D.new()
+	agent.radius = 0.35
+	agent.height = 1.8
+	agent.path_desired_distance = 0.7
+	agent.target_desired_distance = 0.6
+	agent.path_max_distance = 4.0
+	add_child(agent)
 	play("Idle")
 	pick_waypoint()
 
@@ -107,10 +134,42 @@ func is_alert() -> bool:
 	return state == "combat" or aware >= 0.6
 
 
+func walkable() -> NavigationRegion3D:
+	var game = director.get("game") if director else null
+	if game == null:
+		return null
+	var region = game.get("navigation")
+	return region if region != null and region.ready_to_use else null
+
+
+# A spot inside a house within reach, on either floor, or Vector3.INF.
+func house_point() -> Vector3:
+	var region := walkable()
+	if region == null:
+		return Vector3.INF
+	var houses: Array = director.game.city.buildings.filter(func(house: Rect2): return house.get_center().distance_to(Vector2(global_position.x, global_position.z)) < 45.0)
+	if houses.is_empty():
+		return Vector3.INF
+	var house: Rect2 = houses[rng.randi() % houses.size()]
+	var inner := house.grow(-1.4)
+	var level: float = 0.1 if rng.randf() < 0.55 else director.game.city.FLOOR_HEIGHT + 0.1
+	var wanted := Vector3(rng.randf_range(inner.position.x, inner.end.x), level, rng.randf_range(inner.position.y, inner.end.y))
+	var point: Vector3 = region.snap(wanted)
+	if point == Vector3.INF or absf(point.y - wanted.y) > 0.8 or not house.has_point(Vector2(point.x, point.z)):
+		return Vector3.INF
+	return point
+
+
 func pick_waypoint() -> void:
 	if waypoints.is_empty():
 		goal = global_position
 		return
+	# Now and then a patrol sweeps a nearby house, ground floor or upstairs.
+	if rng.randf() < 0.35:
+		var inside := house_point()
+		if inside != Vector3.INF:
+			goal = inside
+			return
 	# Nearby points further along the same road, so patrols follow the streets
 	# (pickWaypoint); off the road, walk back to the closest road point first.
 	var options: Array[Vector3] = []
@@ -130,6 +189,9 @@ func hear(at: Vector3) -> void:
 		return
 	state = "investigate"
 	goal = at + Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5))
+	var region := walkable()
+	if region:
+		goal = region.snap(goal)
 	aware = maxf(aware, 0.55)
 	wait_time = 0.0
 
@@ -290,6 +352,16 @@ func _physics_process(delta: float) -> void:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(look.x, look.z), minf(1.0, delta * 7.0))
 	elif ground_speed > 0.2:
 		visual.rotation.y = lerp_angle(visual.rotation.y, atan2(velocity.x, velocity.z), minf(1.0, delta * 6.0))
+	if is_on_floor() and ground_speed > 0.2:
+		step_distance += ground_speed * delta
+		if step_distance > (1.25 if ground_speed > 2.3 else 0.8):
+			step_distance = 0.0
+			var running := ground_speed > 2.3
+			Footsteps.play(steps, "run" if running else "walk", 6.0)
+			if running and rng.randf() < 0.6:
+				gear.volume_db = -8.0
+				gear.pitch_scale = rng.randf_range(0.85, 1.1)
+				gear.play()
 	var clip := "Idle" if ground_speed < 0.2 else ("Run" if ground_speed > 2.3 else "Walk")
 	play(clip)
 	animation.speed_scale = clampf(ground_speed / CLIP_SPEED[clip], 0.6, 1.5) if CLIP_SPEED.has(clip) else 1.0
@@ -298,12 +370,27 @@ func _physics_process(delta: float) -> void:
 
 
 # Moves toward a point and side-steps when blocked (moveEnemy). Returns true on arrival.
+# With the walkable area baked it follows the path there (round walls, through
+# doorways, up stairs); before that it heads straight for the point.
 func steer(target: Vector3, speed: float, delta: float) -> bool:
 	var to := target - global_position
+	var level := absf(to.y) < 1.6
 	to.y = 0.0
-	if to.length() < 0.5:
+	if to.length() < 0.5 and level:
 		return true
-	var direction := to.normalized()
+	var waypoint := target
+	if walkable() != null:
+		if agent.target_position.distance_to(target) > 0.75:
+			agent.target_position = target
+		if agent.is_navigation_finished():
+			return to.length() < 2.0 or not agent.is_target_reachable()
+		waypoint = agent.get_next_path_position()
+		open_doors(delta)
+	var heading := waypoint - global_position
+	heading.y = 0.0
+	if heading.length() < 0.05:
+		heading = to
+	var direction := heading.normalized()
 	if side_time > 0.0:
 		side_time -= delta
 		direction = (direction * 0.25 + Vector3(-direction.z, 0, direction.x) * side_direction).normalized()
@@ -311,6 +398,18 @@ func steer(target: Vector3, speed: float, delta: float) -> bool:
 	velocity.z = direction.z * speed
 	check_progress(speed, delta)
 	return false
+
+
+# A closed door just ahead swings open as the soldier reaches it.
+func open_doors(delta: float) -> void:
+	door_check -= delta
+	if door_check > 0.0:
+		return
+	door_check = 0.3
+	var city = director.game.city
+	var door: Dictionary = city.nearest_door(global_position, 1.5)
+	if not door.is_empty() and not door.open:
+		city.toggle_door(door)
 
 
 # Blocked for a moment: slide sideways for a second or two (stuckT / sideT).

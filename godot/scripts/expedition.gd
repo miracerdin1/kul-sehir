@@ -7,11 +7,13 @@ const InputBindings = preload("res://scripts/input_bindings.gd")
 const CombatDirector = preload("res://scripts/combat/combat_director.gd")
 const CityBuilder = preload("res://scripts/city/city_builder.gd")
 const CityMap = preload("res://scripts/city/city_map.gd")
+const CityNavigation = preload("res://scripts/city/navigation.gd")
 # Quick crouch-and-grab; the full kneel clip is played faster.
 const PICKUP_TIME := 0.75
 
 var street: Node3D
 var city: Node3D
+var navigation: NavigationRegion3D
 var city_map: CanvasLayer
 var player: CharacterBody3D
 var hud: CanvasLayer
@@ -36,6 +38,10 @@ func _ready() -> void:
 	city = CityBuilder.new()
 	city.setup(street.surfaces)
 	add_child(city)
+	navigation = CityNavigation.new()
+	add_child(navigation)
+	var sources: Array[Node] = [street, city]
+	navigation.bake_from.call_deferred(sources)
 	player = Survivor.new()
 	add_child(player)
 	player.position = Vector3(0, 0.1, 15)

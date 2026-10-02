@@ -29,6 +29,12 @@ func run(game: Node3D) -> void:
 		print("ARMOR QA RESULT: %d failures" % failures.size())
 		game.get_tree().quit(0 if failures.is_empty() else 1)
 		return
+	if "--vehicles-only" in OS.get_cmdline_user_args():
+		game.start_game()
+		await preload("res://tests/vehicles_vault_qa.gd").new().run(game, self)
+		print("VEHICLES QA RESULT: %d failures" % failures.size())
+		game.get_tree().quit(0 if failures.is_empty() else 1)
+		return
 	if "--capture-qa" in OS.get_cmdline_user_args():
 		await capture(game)
 		return
@@ -409,6 +415,8 @@ func check_combat(game: Node3D) -> void:
 	var watcher = director.spawn_enemy(Vector3(2.0, 0.1, -4.0), "rifle")
 	await frames(game, 3)
 	watcher.visual.rotation.y = 0.0
+	# Standing still, facing him (not walking off to a waypoint, maybe inside a house).
+	watcher.wait_time = 5.0
 	var spotted := false
 	for wait in 240:
 		await frames(game, 1)

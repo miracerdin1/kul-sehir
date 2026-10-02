@@ -1,9 +1,11 @@
 extends RefCounted
 # Quick pickups, vaulting over low walls and through broken windows, the glass sound,
-# and the city's tanks and APCs patrolling the roads.
+# the city's tanks and APCs patrolling the roads and opening fire, footsteps, and
+# soldiers walking into houses.
 
 const AssetFactory = preload("res://scripts/asset_factory.gd")
 const BreakableGlass = preload("res://scripts/city/breakable_glass.gd")
+const Footsteps = preload("res://scripts/footsteps.gd")
 
 
 func run(game: Node3D, qa: RefCounted) -> void:
@@ -11,7 +13,13 @@ func run(game: Node3D, qa: RefCounted) -> void:
 	qa.check(BreakableGlass.glass_sound() is AudioStreamOggVorbis, "Glass breaking uses the synthesized sound files")
 	await check_vault(game, qa)
 	await check_window(game, qa)
+	check_footsteps(qa)
+	var health: float = game.player.hp
+	game.player.hp = 1e9
 	await check_vehicles(game, qa)
+	await check_soldier_indoors(game, qa)
+	game.player.hp = health
+	game.player.bleeding = false
 	game.player.position = Vector3(0, 0.2, 10)
 	game.player.velocity = Vector3.ZERO
 	game.player.yaw = 0.0
@@ -110,6 +118,9 @@ func check_vehicles(game: Node3D, qa: RefCounted) -> void:
 		starts.append(vehicle.global_position)
 	var turret: float = tank.turret.rotation.y
 	game.drive_vehicles(true)
+	# Patrol checks first: the crews do not look out for the survivor yet.
+	for vehicle in vehicles:
+		vehicle.sight_time = 1e9
 	await qa_frames(game, 300)
 	var moved := 0
 	for index in range(vehicles.size()):
@@ -137,9 +148,114 @@ func check_vehicles(game: Node3D, qa: RefCounted) -> void:
 		qa.check(mover.speed < 0.3 and gap > 3.6, "A tank stops for the survivor in its path")
 	else:
 		qa.check(false, "A vehicle was driving for the stop test")
+	# In the open in front of a tank, then an APC: they see him and open fire.
+	for kind in ["tank", "apc"]:
+		var shots := 0
+		for vehicle in vehicles.filter(func(candidate): return candidate.kind == kind):
+			shots = await fire_at_player(game, vehicle)
+			if shots > 0:
+				break
+		qa.check(shots > 0, "The %s sees the survivor and fires (%d shots)" % [kind, shots])
+	for vehicle in vehicles:
+		vehicle.sight_time = 1e9
 	game.drive_vehicles(false)
 	await qa_frames(game, 5)
 	qa.check(not tank.engine.playing, "Parked vehicles fall silent")
+
+
+# Puts the survivor 25 m in front of a vehicle; returns the cannon and machine-gun
+# shots it fired at him within ten seconds.
+func fire_at_player(game: Node3D, vehicle: Node3D) -> int:
+	if vehicle.destroyed:
+		return 0
+	var forward: Vector3 = -vehicle.global_basis.z
+	forward.y = 0.0
+	game.player.position = vehicle.global_position + forward.normalized() * 25.0 + Vector3.UP * 0.2
+	game.player.velocity = Vector3.ZERO
+	var before: int = vehicle.cannon_shots + vehicle.mg_shots
+	vehicle.sight_time = 0.0
+	for tick in range(20):
+		await qa_frames(game, 30)
+		if vehicle.cannon_shots + vehicle.mg_shots > before and (vehicle.kind != "tank" or vehicle.cannon_shots > 0):
+			break
+	vehicle.sight_time = 1e9
+	vehicle.sees_player = false
+	return vehicle.cannon_shots + vehicle.mg_shots - before if vehicle.kind != "tank" else vehicle.cannon_shots
+
+
+func check_footsteps(qa: RefCounted) -> void:
+	var takes := {}
+	var last: AudioStream = null
+	var repeated := false
+	for index in range(24):
+		var take := Footsteps.step()
+		repeated = repeated or take == last
+		last = take
+		takes[take] = true
+	qa.check(takes.size() >= 4 and not repeated and last is AudioStreamOggVorbis, "Footsteps vary between several takes and never repeat back to back")
+
+
+# A soldier outside a house with a closed door walks in, opening the door, and up
+# the stairs to the upper floor.
+func check_soldier_indoors(game: Node3D, qa: RefCounted) -> void:
+	var region = game.navigation
+	for wait in range(60):
+		if region.ready_to_use:
+			break
+		await qa_frames(game, 30)
+	qa.check(region.ready_to_use, "The walkable area for soldiers is baked")
+	if not region.ready_to_use:
+		return
+	var city = game.city
+	game.player.position = Vector3(0, 0.2, 15)
+	game.player.velocity = Vector3.ZERO
+	var reached := false
+	var opened := false
+	var tried := 0
+	for door: Dictionary in city.doors:
+		if tried >= 3 or reached:
+			break
+		var at: Vector3 = door.leaf.global_position
+		if at.y > 1.5 or Vector2(at.x, at.z).distance_to(Vector2(0, 15)) < 30.0:
+			continue
+		var houses: Array = city.buildings.filter(func(house: Rect2): return house.grow(0.5).has_point(Vector2(at.x, at.z)))
+		if houses.is_empty():
+			continue
+		var house: Rect2 = houses[0]
+		var middle := house.get_center()
+		var out := (Vector2(at.x, at.z) - middle).normalized()
+		var start: Vector3 = region.snap(Vector3(at.x + out.x * 3.0, 0.1, at.z + out.y * 3.0))
+		var upstairs := Vector3.INF
+		for attempt in range(12):
+			var inner := house.grow(-1.4)
+			var wanted := Vector3(randf_range(inner.position.x, inner.end.x), city.FLOOR_HEIGHT + 0.1, randf_range(inner.position.y, inner.end.y))
+			var point: Vector3 = region.snap(wanted)
+			if absf(point.y - wanted.y) < 0.4 and house.has_point(Vector2(point.x, point.z)):
+				upstairs = point
+				break
+		if start == Vector3.INF or house.grow(0.2).has_point(Vector2(start.x, start.z)) or upstairs == Vector3.INF:
+			continue
+		tried += 1
+		if door.open:
+			city.toggle_door(door)
+		var soldier = game.director.spawn_enemy(start, "rifle")
+		await qa_frames(game, 2)
+		soldier.state = "patrol"
+		soldier.wait_time = 0.0
+		soldier.goal = upstairs
+		for tick in range(60):
+			await qa_frames(game, 30)
+			opened = opened or door.open
+			var spot: Vector3 = soldier.global_position
+			if spot.y > city.FLOOR_HEIGHT - 0.4 and house.has_point(Vector2(spot.x, spot.z)):
+				reached = true
+				break
+		qa.check(soldier.steps.stream is AudioStreamOggVorbis, "A walking soldier's boots can be heard")
+		game.director.enemies.erase(soldier)
+		soldier.queue_free()
+		await qa_frames(game, 2)
+	qa.check(opened, "A soldier opens a closed door on his way in")
+	qa.check(reached, "A soldier walks into a house and up the stairs")
 
 
 func near_road(at: Vector3) -> bool:
