@@ -78,6 +78,11 @@ var vault_time := -1.0
 var vault_length := 0.0
 var vault_points: Array[Vector3] = []
 var vault_side := 1.0
+# With the Mixamo vault clip (hand on the ledge, legs swung over) the clip lifts the
+# body over a sill of VAULT_CLIP_SILL; without it the jump pose and a lean stand in.
+var vault_clip := false
+const VAULT_CLIP_TIME := 0.95
+const VAULT_CLIP_SILL := 0.95
 
 
 func _ready() -> void:
@@ -365,7 +370,8 @@ func start_vault() -> bool:
 	if path.is_empty():
 		return false
 	vault_points = path
-	vault_length = 0.42 + 0.12 * path[0].distance_to(path[2])
+	vault_clip = has_clip("Vault")
+	vault_length = VAULT_CLIP_TIME if vault_clip else 0.42 + 0.12 * path[0].distance_to(path[2])
 	vault_time = 0.0
 	vault_side = -1.0 if randf() < 0.5 else 1.0
 	stamina -= JUMP_STAMINA
@@ -373,8 +379,17 @@ func start_vault() -> bool:
 	velocity = Vector3.ZERO
 	var across := path[2] - path[0]
 	visual.rotation.y = atan2(across.x, across.z)
-	play_action("JumpAir", vault_length)
+	play_action("Vault" if vault_clip else "JumpAir", vault_length)
 	return true
+
+
+func has_clip(name: String) -> bool:
+	if not animation:
+		return false
+	for clip in animation.get_animation_list():
+		if clip_name(clip).to_lower() == name.to_lower():
+			return true
+	return false
 
 
 # Hands on the top, hips up and over, legs swung to one side, then down on the far side.
@@ -384,6 +399,20 @@ func advance_vault(delta: float) -> void:
 	var start := vault_points[0]
 	var over := vault_points[1]
 	var landing := vault_points[2]
+	if vault_clip:
+		# A step to the ledge, the swing over it, the landing; the clip does the lift,
+		# shifted up or down by how far this ledge differs from the clip's sill.
+		var reach := start.lerp(Vector3(over.x, start.y, over.z) - (landing - start).normalized() * 0.45, smoothstep(0.0, 0.25, t))
+		var flat := reach.lerp(landing, smoothstep(0.3, 0.85, t))
+		var ledge := over.y - 0.12 - start.y
+		flat.y = lerpf(start.y, landing.y, smoothstep(0.3, 0.85, t)) + (ledge - VAULT_CLIP_SILL) * sin(t * PI)
+		global_position = flat
+		if armed and armed.rig:
+			animation.advance(delta)
+			armed.update(delta, false, aim_target)
+		if t >= 1.0:
+			end_vault()
+		return
 	# Quadratic curve whose apex passes just over the top.
 	var control := over * 2.0 - (start + landing) * 0.5 + Vector3.UP * 0.15
 	var eased := t * t * (3.0 - 2.0 * t) * 0.35 + t * 0.65
