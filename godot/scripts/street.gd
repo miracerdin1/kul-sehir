@@ -62,13 +62,6 @@ func create_ground() -> void:
 
 
 func create_buildings() -> void:
-	for side in [-1.0, 1.0]:
-		for index in range(5):
-			var building := Node3D.new()
-			add_child(building)
-			building.position = Vector3(side * 7.0, 0.15, -22.0 + index * 11.0)
-			building.rotation.y = side * PI / 2.0
-			build_facade(building, index, side)
 	var sign_root := Node3D.new()
 	add_child(sign_root)
 	sign_root.position = Vector3(0, 3.4, -27.8)
@@ -76,95 +69,6 @@ func create_buildings() -> void:
 	lettering(sign_root, "TAHLİYE BÖLGESİ  /  07", Vector3(0, 0, 0.08), 48, 0.012)
 	for x in [-3.1, 3.1]:
 		box(sign_root, Vector3(x, -1.6, 0), Vector3(0.08, 4, 0.08), surfaces.plain(Color("454642"), 0.65, 0.5), false)
-
-
-func build_facade(parent: Node3D, index: int, side: float) -> void:
-	var colors := [Color("b6a28c"), Color("aaa49a"), Color("a89d8c"), Color("b1a99d")]
-	var facade_texture := "brick_wall_001" if index % 3 == 1 else "blue_plaster_weathered"
-	var plaster: Material = surfaces.textured(facade_texture, colors[index % 4], 0.38)
-	var brick: Material = surfaces.textured("brick_wall_001", Color("aaa499"), 0.45)
-	var trim: Material = surfaces.textured("rubble", Color("96978b"), 0.6)
-	var metal: Material = surfaces.plain(Color("343a38"), 0.62, 0.4)
-	var dark: Material = surfaces.plain(Color("131c20"), 0.35)
-	var floor_count := 2 + index % 2
-	var width := 10.6
-	var height := floor_count * 3.0
-	box(parent, Vector3(0, 0.06, 3.5), Vector3(width, 0.12, 7), trim)
-	box(parent, Vector3(0, height / 2, 7), Vector3(width, height, 0.35), brick)
-	for x in [-width / 2, width / 2]:
-		box(parent, Vector3(x, height / 2, 3.5), Vector3(0.35, height, 7), brick)
-	for floor_index in range(floor_count):
-		var base := floor_index * 3.0
-		box(parent, Vector3(0, base + 2.75, 0), Vector3(width, 0.5, 0.45), plaster)
-		box(parent, Vector3(0, base + 2.95, 0.04), Vector3(width + 0.12, 0.12, 0.66), trim)
-		if floor_index > 0:
-			box(parent, Vector3(0, base + 0.47, 0), Vector3(width, 0.95, 0.45), plaster)
-			box(parent, Vector3(0, base, 3.5), Vector3(width, 0.15, 7), trim)
-		for column in range(4):
-			var x := -4.0 + column * 2.65
-			box(parent, Vector3(x - 1.05, base + 1.5, 0), Vector3(0.6, 2.6, 0.48), plaster)
-			if floor_index == 0 and column == 2:
-				continue
-			var window_height := 1.55 if floor_index > 0 else 2.3
-			var middle := base + (1.72 if floor_index > 0 else 1.25)
-			box(parent, Vector3(x, middle, 0.18), Vector3(1.46, window_height, 0.035), dark, false)
-			for edge in [-0.77, 0.77]:
-				box(parent, Vector3(x + edge, middle, -0.065), Vector3(0.055, window_height + 0.15, 0.12), metal, false)
-			box(parent, Vector3(x, middle, -0.065), Vector3(0.04, window_height, 0.12), metal, false)
-			box(parent, Vector3(x, middle, -0.075), Vector3(1.6, 0.06, 0.12), metal, false)
-			box(parent, Vector3(x, middle - window_height / 2, -0.14), Vector3(1.8, 0.14, 0.48), trim, false)
-			if (column + floor_index + index) % 3 == 0:
-				var board := box(parent, Vector3(x, middle, -0.2), Vector3(1.8, 0.17, 0.06), brick, false)
-				board.rotation.z = 0.3
-			if floor_index == 0:
-				AssetFactory.collider(parent, Vector3(1.6, 2.4, 0.22), Vector3(x, 1.2, 0))
-	box(parent, Vector3(width / 2 - 0.22, height / 2, 0), Vector3(0.6, height, 0.48), plaster)
-	create_broken_parapet(parent, height, width, brick)
-	for x in [-4.7, 4.6]:
-		var pipe := MeshInstance3D.new()
-		var mesh := CylinderMesh.new()
-		mesh.top_radius = 0.045
-		mesh.bottom_radius = 0.045
-		mesh.height = height
-		mesh.radial_segments = 8
-		pipe.mesh = mesh
-		pipe.material_override = metal
-		parent.add_child(pipe)
-		pipe.position = Vector3(x, height / 2, -0.3)
-	if index == 2:
-		var board := Node3D.new()
-		parent.add_child(board)
-		board.position = Vector3(-1.0, 2.45, -0.37)
-		board.rotation.y = PI
-		box(board, Vector3.ZERO, Vector3(6.4, 0.55, 0.12), metal, false)
-		lettering(board, "ERZAK DEPOSU" if side < 0 else "KARAKÖY TAMİR", Vector3(0, 0, 0.08), 48, 0.012)
-		var interior_light := OmniLight3D.new()
-		interior_light.position = Vector3(0, 2.0, 3.0)
-		interior_light.light_color = Color("c7bd8f")
-		interior_light.light_energy = 0.7
-		interior_light.omni_range = 6.0
-		parent.add_child(interior_light)
-
-
-func create_broken_parapet(parent: Node3D, height: float, width: float, material: Material) -> void:
-	var surface := SurfaceTool.new()
-	surface.begin(Mesh.PRIMITIVE_TRIANGLES)
-	for index in range(18):
-		var x := -width / 2 + width * index / 18.0
-		var next_x := x + width / 18.0
-		var left_height := height + rng.randf_range(0.12, 0.75)
-		var right_height := height + rng.randf_range(0.15, 0.8)
-		var a := Vector3(x, height, -0.23)
-		var b := Vector3(x, left_height, -0.23)
-		var c := Vector3(next_x, right_height, -0.23)
-		var d := Vector3(next_x, height, -0.23)
-		for vertex: Vector3 in [a, b, c, a, c, d]:
-			surface.add_vertex(vertex)
-	surface.generate_normals()
-	var instance := MeshInstance3D.new()
-	instance.mesh = surface.commit()
-	instance.material_override = material
-	parent.add_child(instance)
 
 
 func lettering(parent: Node3D, text: String, at: Vector3, font_size: int, pixel_size: float) -> void:

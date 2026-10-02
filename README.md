@@ -19,9 +19,9 @@ Yeni klondan sonra aşağıdaki hazırlık komutlarını çalıştır. Godot ça
 | C veya Ctrl | Çömel / kalk |
 | Z | Yere yat / kalk |
 | Boşluk | Zıpla (çömelik veya yatıkken ayağa kalk) |
-| E | Yakındaki malzemeyi veya silahı al, cesedi ara, sobayı kullan |
+| E | Yakındaki malzemeyi veya silahı al, cesedi ara, kapıyı aç/kapat, sobayı kullan |
 | Sağ tık (basılı) | Nişan al |
-| Sol tık | Ateş et / bıçak veya yumruk |
+| Sol tık | Ateş et / bıçak veya yumruk; camları kır |
 | R | Şarjör değiştir |
 | 1 – 4 | Silah seç (yumruk, bıçak, tabanca/pompalı, tüfek) |
 | H | Sargı bezi (kanamayı durdurur) |
@@ -44,6 +44,8 @@ Kaldırımdaki yakıt bidonunu, **Erzak Deposu** içindeki erzağı ve sokağın
 - HTML'deki silahlar: yumruk, bıçak, tabanca, pompalı ve tüfek (hasar, şarjör, sekme, ses). Nişan alırken gövde hedefe döner; kafadan vuruş ve habersiz hedefe bıçakla tek darbe.
 - Devriye gezen, sesi araştıran ve çatışmaya giren askerler; görüşleri gün ışığına ve havaya bağlı. Can, kanama, sargı bezi, ölüm ve yeniden başlama.
 - Yollarla ayrılmış 12 bloklu şehir: içine girilebilen yıkık binalar, enkaz, yanmış arabalar, tanklar, siperler; binalara dağıtılmış silah ve mermiler; M ile harita.
+- Başlangıç sokağı dahil iki katlı evler: eğimli çatı, baca, söve ve denizlikler; açılan kapılar, merdivenler, üst kat korkulukları, ahşap döşeme ve raflar.
+- Şeffaf pencere camları: ateş veya yakından yumruk/bıçak darbesiyle kırılır; kısa parça efekti ve cam sesi çıkar, çarpışma kalkar. Kırılma sesi yakındaki askerleri uyarır.
 - Gün/gece döngüsü ve değişen hava (açık, bulutlu, sis, yağmur, kar, tipi).
 - Kameraya göre hareket, koşma, zıplama; duvarlara yaklaşınca kısalan omuz kamerası.
 - Fotoğraf tabanlı renk, normal ve pürüzlülük dokuları; gerçek 3B araç, soba, bariyer, taş ve malzeme modelleri.
@@ -51,7 +53,7 @@ Kaldırımdaki yakıt bidonunu, **Erzak Deposu** içindeki erzağı ve sokağın
 - Türkçe menü, görev, çanta, dayanıklılık ve ısınma sistemi.
 - Orijinal üretilmiş adım sesi ve düşük seviyeli ortam uğultusu.
 
-Henüz taşınmayanlar: açlık/susuzluk, ıslaklık, kendi ateşini yakma, dolap/sandık arama, kayıt sistemi. Silah modelleri basit yer tutucudur; şehir binaları dokulu kutulardan oluşur, el yapımı ayrıntılı yıkım sahneleri sonraki görsel çalışma kapsamındadır.
+Henüz taşınmayanlar: açlık/susuzluk, ıslaklık, kendi ateşini yakma, dolap/sandık arama, kayıt sistemi. Silah modelleri basit yer tutucudur; şehir binaları ortak modüler parçalardan üretilir, el yapımı ayrıntılı yıkım sahneleri sonraki görsel çalışma kapsamındadır.
 
 ## Geliştirme
 
@@ -99,7 +101,7 @@ Oynanış kontrolleri: hareket, duruşlar, zıplama/iniş, eğilip alma, duvar �
 & '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --headless --path godot -- --smoke-test
 ```
 
-Gerçek Vulkan/Mobile render ile menü, sokak, yürüme, soba, şehir, harita ve çanta görüntüleri `godot/qa-output/` altında alınır:
+Gerçek Vulkan/Mobile render ile menü, sokak, yürüme, soba, şehir, ev dışı/üst katı, sağlam/kırılan/kırılmış cam, harita ve çanta görüntüleri `godot/qa-output/` altında alınır:
 
 ```powershell
 & '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --path godot -- --capture-qa
@@ -113,7 +115,7 @@ Gerçek Vulkan/Mobile render ile menü, sokak, yürüme, soba, şehir, harita ve
 & '.\.tools\godot\Godot_v4.7.2-stable_win64_console.exe' --path godot -- --city-performance
 ```
 
-Şehir eklenmeden önce MX450 üzerinde tek sokakta yaklaşık 48–60 FPS görülmüştü; şehirli ölçüm bu testle yapılacak.
+2026-10-02 ölçümü: MX450 / 1280 × 720, beş noktada dengeli ayar ortalamaları 72.2–101.5 FPS; performans ayarı 89.0–118.4 FPS. Bu kısa ölçümdür; uzun süreli performans testi değildir.
 
 **Bağımsız Windows build/export yapılmadı.** Başlatıcı, yerel Godot çalıştırıcısıyla projeyi açar. Kullanıcı talimatı gereği build komutları çalıştırılmadı. Codebase-memory MCP araçları oturumda bulunmadığından kaynaklar doğrudan incelendi.
 
