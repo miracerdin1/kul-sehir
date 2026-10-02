@@ -44,6 +44,8 @@ var motion := ""
 var last_position := Vector3.ZERO
 var frame_moved := 0.0
 var rng := RandomNumberGenerator.new()
+# Patrol legs walked so far.
+var legs := 0
 var steps: AudioStreamPlayer3D
 var gear: AudioStreamPlayer3D
 var step_distance := 0.0
@@ -164,8 +166,10 @@ func pick_waypoint() -> void:
 	if waypoints.is_empty():
 		goal = global_position
 		return
-	# Now and then a patrol sweeps a nearby house, ground floor or upstairs.
-	if rng.randf() < 0.35:
+	legs += 1
+	# Now and then a patrol sweeps a nearby house, ground floor or upstairs; the
+	# first leg after spawning always follows the road.
+	if legs > 1 and rng.randf() < 0.35:
 		var inside := house_point()
 		if inside != Vector3.INF:
 			goal = inside
