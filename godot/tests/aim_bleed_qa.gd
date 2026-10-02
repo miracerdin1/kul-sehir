@@ -18,6 +18,14 @@ func run(game: Node3D, qa: RefCounted) -> void:
 	combat.aim_held = false
 	await qa.frames(game, 40)
 	qa.check(absf(player.camera.fov - normal_fov) < 1.0, "Releasing aim zooms back out")
+	combat._unhandled_input(click("aim", true))
+	combat._unhandled_input(click("aim", false))
+	await qa.frames(game, 30)
+	qa.check(combat.aim_held and player.camera.fov < 35.0, "One right click keeps the rifle aimed after release")
+	combat._unhandled_input(click("aim", true))
+	combat._unhandled_input(click("aim", false))
+	await qa.frames(game, 40)
+	qa.check(not combat.aim_held and absf(player.camera.fov - normal_fov) < 1.0, "A second right click lowers the rifle")
 	combat.owned.rifle = false
 	combat.magazine.rifle = 0
 	combat.ammo.ammo762 = 0
@@ -33,3 +41,10 @@ func run(game: Node3D, qa: RefCounted) -> void:
 	await qa.frames(game, 60)
 	qa.check(player.alive and player.hp >= health, "Health stops draining once the bleeding stops")
 	player.hp = 100.0
+
+
+func click(action: String, pressed: bool) -> InputEventAction:
+	var event := InputEventAction.new()
+	event.action = action
+	event.pressed = pressed
+	return event
