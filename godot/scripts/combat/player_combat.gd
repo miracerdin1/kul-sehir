@@ -203,6 +203,9 @@ func shoot_ray(origin: Vector3, direction: Vector3, muzzle: Vector3, gun: Dictio
 	if hit.is_empty():
 		return
 	var target: Object = hit.collider
+	if target.is_in_group("breakable_glass"):
+		break_window(target, direction)
+		return
 	if target.is_in_group("enemy") and target.alive:
 		var head: bool = end.y - target.global_position.y > 1.55
 		var distance := origin.distance_to(end)
@@ -222,6 +225,8 @@ func melee(gun: Dictionary) -> void:
 	forward.y = 0.0
 	forward = forward.normalized()
 	player.visual.rotation.y = atan2(forward.x, forward.z)
+	if strike_obstacle(gun.range + 0.4):
+		return
 	var best: Node3D
 	var best_distance := 99.0
 	for enemy in director.enemies:
@@ -246,6 +251,25 @@ func melee(gun: Dictionary) -> void:
 			damage *= 1.6
 	var killed: bool = best.take_hit(damage, false, best.global_position + Vector3(0, 1.3, 0))
 	hit_enemy.emit(false, killed)
+
+
+func break_window(window: StaticBody3D, direction: Vector3) -> void:
+	if window.shatter(direction):
+		director.alert_noise(window.global_position, 18.0)
+		message.emit("Cam kırıldı.")
+
+
+func strike_obstacle(reach: float) -> bool:
+	var origin := player.global_position + Vector3(0, 1.35, 0)
+	var query := PhysicsRayQueryParameters3D.create(origin, origin + aim_direction() * reach)
+	query.exclude = [player.get_rid()]
+	var hit := player.get_world_3d().direct_space_state.intersect_ray(query)
+	if hit.is_empty():
+		return false
+	if hit.collider.is_in_group("breakable_glass"):
+		break_window(hit.collider, aim_direction())
+		return true
+	return not hit.collider.is_in_group("enemy")
 
 
 func _physics_process(delta: float) -> void:

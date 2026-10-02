@@ -43,6 +43,17 @@ func add_basis(material: Material, center: Vector3, size: Vector3, basis: Basis,
 	count += 1
 
 
+func add_triangle(material: Material, a: Vector3, b: Vector3, c: Vector3, shade := 1.0) -> void:
+	if not sets.has(material):
+		sets[material] = [PackedVector3Array(), PackedVector3Array(), PackedColorArray()]
+	var arrays: Array = sets[material]
+	var normal := (c - a).cross(b - a).normalized()
+	for vertex in [a, b, c]:
+		arrays[0].append(vertex)
+		arrays[1].append(normal)
+		arrays[2].append(Color(shade, shade, shade))
+
+
 func commit(parent: Node3D, view_range: float) -> Array[MeshInstance3D]:
 	var instances: Array[MeshInstance3D] = []
 	for material: Material in sets:

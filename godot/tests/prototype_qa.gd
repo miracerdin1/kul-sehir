@@ -23,6 +23,13 @@ func run(game: Node3D) -> void:
 	if "--capture-qa" in OS.get_cmdline_user_args():
 		await capture(game)
 		return
+	if "--houses-only" in OS.get_cmdline_user_args():
+		game.start_game()
+		game.toggle_quality()
+		await preload("res://tests/houses_qa.gd").new().run(game, self)
+		print("HOUSE QA RESULT: %d failures" % failures.size())
+		game.get_tree().quit(0 if failures.is_empty() else 1)
+		return
 	check(game.street.pickups.size() == 3, "Three supplies exist")
 	check(game.player.animation != null, "Imported character has animation player")
 	print("ANIMATIONS: ", game.player.animation.get_animation_list())
@@ -113,6 +120,7 @@ func run(game: Node3D) -> void:
 	game.toggle_quality()
 	check(game.low_quality and game.get_viewport().msaa_3d == Viewport.MSAA_DISABLED, "Performance preset applies")
 	await check_city(game)
+	await preload("res://tests/houses_qa.gd").new().run(game, self)
 	await check_combat(game)
 	game.ambient.stop()
 	game.player.footstep.stop()
@@ -469,5 +477,6 @@ func capture(game: Node3D) -> void:
 	game.hud.show_inventory(game.inventory)
 	await frames(game, 10)
 	await save_frame(game, "res://qa-output/inventory.png")
+	await preload("res://tests/houses_qa.gd").new().capture(game, self)
 	print("CAPTURE FPS: ", Engine.get_frames_per_second())
 	game.get_tree().quit(0 if failures.is_empty() else 1)

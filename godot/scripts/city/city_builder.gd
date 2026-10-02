@@ -5,6 +5,8 @@ extends Node3D
 
 const AssetFactory = preload("res://scripts/asset_factory.gd")
 const BoxBatch = preload("res://scripts/city/box_batch.gd")
+const WindowBatch = preload("res://scripts/city/window_batch.gd")
+const HouseDetails = preload("res://scripts/city/house_details.gd")
 
 # Road centre lines. The first street is the x = 0 road between z -29 and 29.
 const ROADS_X: Array[float] = [-88.0, -44.0, 0.0, 44.0, 88.0]
@@ -18,8 +20,8 @@ const BARRIER_Z := -26.0
 const VIEW_RANGE := 135.0
 const LOW_VIEW_RANGE := 90.0
 const FLOOR_HEIGHT := 3.2
-const DOOR_WIDTH := 1.1
-const DOOR_LEAF := 0.98
+const DOOR_WIDTH := 1.4
+const DOOR_LEAF := 1.18
 const DOOR_HEIGHT := 2.3
 const DOOR_VIEW_RANGE := 45.0
 const STAIR_WIDTH := 1.15
@@ -36,6 +38,10 @@ var doors: Array = []
 # [foot, landing] of every staircase.
 var stair_list: Array = []
 var door_material: StandardMaterial3D
+var glass_material: StandardMaterial3D
+var windows: Array[StaticBody3D] = []
+var glass_meshes: Array[MultiMeshInstance3D] = []
+var street_stairs: Array = []
 # Road points soldiers patrol between (world.nodes).
 var nodes: Array[Vector3] = []
 # [kind, amount, position] for the combat director to place.
@@ -55,6 +61,7 @@ func _ready() -> void:
 	for x in range(ROADS_X.size() - 1):
 		for z in range(ROADS_Z.size() + 1):
 			create_block(x, z)
+	create_street_houses()
 	create_boundary()
 	create_street_props()
 	create_nodes()
@@ -68,6 +75,7 @@ func create_materials() -> void:
 		"brick": ["brick_wall_001", Color("9a958c"), 0.3],
 		"rubble": ["rubble", Color("8c8c84"), 0.6],
 		"pad": ["blue_plaster_weathered", Color("77786f"), 0.22],
+		"trim": ["blue_plaster_weathered", Color("d4c9ad"), 0.55],
 	}
 	for key: String in sources:
 		var source: Array = sources[key]
@@ -86,6 +94,16 @@ func create_materials() -> void:
 	door_material = materials.wood.duplicate()
 	door_material.vertex_color_use_as_albedo = false
 	door_material.albedo_color = Color("4d3b2b")
+	materials.roof = surfaces.plain(Color("604c43"), 0.78)
+	materials.frame = surfaces.plain(Color("b8b3a0"), 0.6)
+	materials.floor = surfaces.textured("blue_plaster_weathered", Color("938876"), 0.6)
+	materials.rug = surfaces.plain(Color("59443d"), 1.0)
+	glass_material = StandardMaterial3D.new()
+	glass_material.albedo_color = Color(0.48, 0.69, 0.73, 0.3)
+	glass_material.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	glass_material.roughness = 0.13
+	glass_material.metallic = 0.18
+	glass_material.cull_mode = BaseMaterial3D.CULL_DISABLED
 
 
 func create_ground() -> void:
@@ -145,6 +163,7 @@ func create_block(ix: int, iz: int) -> void:
 						var amount := 1 if kind == "bandage" else rng.randi_range(1, 3) if kind == "food" else rng.randi_range(4, 10)
 						loot.append([kind, amount, Vector3(middle.x + rng.randf_range(-4, 4), 0.06, middle.y + rng.randf_range(-4, 4))])
 	meshes.append_array(batch.commit(chunk, VIEW_RANGE))
+	commit_windows(chunk)
 
 
 func make_chunk(center: Vector3) -> Node3D:
@@ -154,8 +173,45 @@ func make_chunk(center: Vector3) -> Node3D:
 	var body := StaticBody3D.new()
 	chunk.add_child(body)
 	chunk.set_meta("body", body)
+	chunk.set_meta("windows", WindowBatch.new())
 	chunks.append(chunk)
 	return chunk
+
+
+func commit_windows(chunk: Node3D) -> void:
+	var glazing: WindowBatch = chunk.get_meta("windows")
+	windows.append_array(glazing.commit(chunk, glass_material, VIEW_RANGE))
+	if glazing.display != null:
+		glass_meshes.append(glazing.display)
+	chunk.remove_meta("windows")
+
+
+func create_street_houses() -> void:
+	for side in [-1.0, 1.0]:
+		for index in range(5):
+			var middle := Vector2(side * 10.5, -22.0 + index * 11.0)
+			var chunk := make_chunk(Vector3(middle.x, 0, middle.y))
+			var batch := BoxBatch.new()
+			make_building(batch, chunk.get_meta("body"), chunk, middle, Vector2(7.0, 10.6), 3 if side < 0 else 2)
+			street_stairs.append(stair_list.back())
+			meshes.append_array(batch.commit(chunk, VIEW_RANGE))
+			commit_windows(chunk)
+			if index == 2:
+				var sign := Label3D.new()
+				sign.text = "ERZAK DEPOSU" if side < 0 else "KARAKÖY TAMİR"
+				sign.font_size = 48
+				sign.pixel_size = 0.008
+				sign.modulate = Color("d8cfb3")
+				sign.outline_modulate = Color("252e2b")
+				chunk.add_child(sign)
+				sign.position = Vector3(-side * 3.72, 2.85, 0)
+				sign.rotation.y = -side * PI / 2.0
+				var light := OmniLight3D.new()
+				light.position = Vector3(0, 2.2, 0)
+				light.light_color = Color("e0c29a")
+				light.light_energy = 0.65
+				light.omni_range = 5.0
+				chunk.add_child(light)
 
 
 func local(chunk: Node3D, world: Vector3) -> Vector3:
@@ -171,8 +227,7 @@ func solid(body: StaticBody3D, chunk: Node3D, world: Vector3, size: Vector3, yaw
 	body.add_child(shape)
 
 
-# A run of wall pieces, floor by floor: a framed doorway on the ground floor,
-# windows with sills, and a broken top edge on the highest floor (wallRun).
+# Aligned window bays on both floors, with one framed ground-floor entrance.
 func wall_run(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, material: Material, from: Vector2, to: Vector2, floors: int, door: float, shade: float, middle: Vector2) -> void:
 	var length := from.distance_to(to)
 	var direction := (to - from) / length
@@ -184,15 +239,9 @@ func wall_run(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, material: Mate
 		for level in range(floors):
 			var base := level * FLOOR_HEIGHT
 			var top := base + FLOOR_HEIGHT
-			if level == floors - 1:
-				var roll := rng.randf()
-				if roll < 0.08:
-					top = base + rng.randf_range(0.3, 0.7)
-				elif roll < 0.4:
-					top = base + FLOOR_HEIGHT * rng.randf_range(0.5, 0.88)
 			if level == 0 and index == door_index:
 				doorway(batch, body, chunk, material, center, direction, piece, top, shade, middle)
-			elif top - base > 2.4 and rng.randf() < (0.3 if level == 0 else 0.55):
+			elif piece > 2.0:
 				window(batch, body, chunk, material, center, direction, piece, base, top, shade)
 			else:
 				wall_part(batch, body, chunk, material, center, direction, 0.0, piece + 0.04, base, top, shade)
@@ -211,21 +260,27 @@ func wall_part(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, material: Mat
 
 
 func window(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, material: Material, center: Vector2, direction: Vector2, piece: float, base: float, top: float, shade: float) -> void:
-	var opening := minf(1.3, piece - 0.9)
+	var opening := minf(1.65, piece - 0.9)
 	var side := (piece - opening) / 2.0
 	var sill := base + 0.95
-	var head := minf(top, base + 2.2)
+	var head := minf(top, base + 2.55)
 	wall_part(batch, body, chunk, material, center, direction, 0.0, piece + 0.04, base, sill, shade)
 	wall_part(batch, body, chunk, material, center, direction, 0.0, piece + 0.04, head, top, shade)
 	for sign in [-1.0, 1.0]:
 		wall_part(batch, body, chunk, material, center, direction, sign * (opening + side) / 2.0, side + 0.04, sill, head, shade)
-	# A concrete sill sticking out both sides, and now and then a board nailed across.
-	wall_part(batch, body, chunk, materials.concrete, center, direction, 0.0, opening + 0.2, sill, sill + 0.08, shade * 0.85, 0.5)
-	if rng.randf() < 0.3:
-		var along_x := absf(direction.x) > 0.5
-		var board := Vector3(opening + 0.3, 0.16, 0.04) if along_x else Vector3(0.04, 0.16, opening + 0.3)
-		var lean := rng.randf_range(-0.25, 0.25)
-		batch.add(materials.wood, local(chunk, Vector3(center.x, sill + rng.randf_range(0.4, 0.9), center.y)), board, 0.0, 0.8, Vector2(0, lean) if along_x else Vector2(lean, 0))
+	wall_part(batch, body, chunk, materials.trim, center, direction, 0.0, opening + 0.3, sill - 0.04, sill + 0.08, shade, 0.6)
+	wall_part(batch, body, chunk, materials.trim, center, direction, 0.0, opening + 0.3, head - 0.02, head + 0.13, shade, 0.48)
+	var yaw := atan2(-direction.y, direction.x)
+	var basis := Basis(Vector3.UP, yaw)
+	var at := local(chunk, Vector3(center.x, (sill + head) / 2.0, center.y))
+	for edge in [-1.0, 1.0]:
+		batch.add_basis(materials.frame, at + basis * Vector3(edge * (opening / 2.0 - 0.04), 0, 0), Vector3(0.08, head - sill, 0.2), basis)
+		batch.add_basis(materials.frame, at + Vector3(0, edge * ((head - sill) / 2.0 - 0.05), 0), Vector3(opening, 0.1, 0.2), basis)
+	# Thin mullions remain when the glazing breaks; no invisible full-window wall.
+	batch.add_basis(materials.frame, at, Vector3(0.055, head - sill, 0.12), basis)
+	batch.add_basis(materials.frame, at + Vector3(0, 0.28, 0), Vector3(opening, 0.045, 0.12), basis)
+	var glazing: WindowBatch = chunk.get_meta("windows")
+	glazing.add(at, Vector2(opening - 0.16, head - sill - 0.2), yaw)
 
 
 # A doorway one door wide, with a wooden frame and often a door that opens with E.
@@ -237,8 +292,11 @@ func doorway(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, material: Mater
 		wall_part(batch, body, chunk, materials.wood, center, direction, sign * (DOOR_WIDTH / 2.0 - 0.05), 0.1, 0.0, DOOR_HEIGHT, 0.9, 0.44)
 	wall_part(batch, body, chunk, material, center, direction, 0.0, DOOR_WIDTH + 0.04, DOOR_HEIGHT, wall_top, shade)
 	wall_part(batch, body, chunk, materials.wood, center, direction, 0.0, DOOR_WIDTH, DOOR_HEIGHT - 0.1, DOOR_HEIGHT, 0.9, 0.44)
-	if rng.randf() < 0.7:
-		make_door(chunk, center - direction * (DOOR_WIDTH / 2.0 - 0.1), direction, middle)
+	make_door(chunk, center - direction * (DOOR_WIDTH / 2.0 - 0.1), direction, middle)
+	var outward := (center - middle).normalized()
+	var canopy := center + outward * 0.35
+	var yaw := atan2(-direction.y, direction.x)
+	batch.add(materials.roof, local(chunk, Vector3(canopy.x, DOOR_HEIGHT + 0.3, canopy.y)), Vector3(DOOR_WIDTH + 0.55, 0.13, 1.1), yaw)
 
 
 func make_door(chunk: Node3D, hinge: Vector2, direction: Vector2, middle: Vector2) -> void:
@@ -249,6 +307,9 @@ func make_door(chunk: Node3D, hinge: Vector2, direction: Vector2, middle: Vector
 	pivot.rotation.y = closed
 	chunk.add_child(pivot)
 	var leaf := AnimatableBody3D.new()
+	# The parent hinge is tweened on physics ticks. Internal sync would retain
+	# the leaf's old collision transform when only the parent rotates.
+	leaf.sync_to_physics = false
 	leaf.position = Vector3(DOOR_LEAF / 2.0, DOOR_HEIGHT / 2.0 - 0.04, 0)
 	pivot.add_child(leaf)
 	var shape := CollisionShape3D.new()
@@ -272,6 +333,16 @@ func make_door(chunk: Node3D, hinge: Vector2, direction: Vector2, middle: Vector
 	handle.visibility_range_end = DOOR_VIEW_RANGE / 2.0
 	handle.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	leaf.add_child(handle)
+	for height in [-0.58, 0.48]:
+		for side in [-1.0, 1.0]:
+			var inset := MeshInstance3D.new()
+			var panel_mesh := BoxMesh.new()
+			panel_mesh.size = Vector3(DOOR_LEAF - 0.24, 0.72, 0.025)
+			inset.mesh = panel_mesh
+			inset.material_override = materials.wood
+			inset.position = Vector3(0, height, side * 0.045)
+			inset.visibility_range_end = DOOR_VIEW_RANGE
+			leaf.add_child(inset)
 	# The door swings into the building.
 	var inward := closed + 1.75
 	var outward := closed - 1.75
@@ -298,6 +369,8 @@ func nearest_door(from: Vector3, reach := 1.6) -> Dictionary:
 	var best := {}
 	for door: Dictionary in doors:
 		var leaf: Node3D = door.leaf
+		if absf(from.y - door.pivot.global_position.y) > 1.5:
+			continue
 		var distance := Vector2(from.x, from.z).distance_to(Vector2(leaf.global_position.x, leaf.global_position.z))
 		if distance < reach:
 			reach = distance
@@ -305,17 +378,15 @@ func nearest_door(from: Vector3, reach := 1.6) -> Dictionary:
 	return best
 
 
-# An enterable shell: walls with doorways and windows, a floor slab and stairs
-# in two-storey buildings, a broken roof, rubble inside, and supplies (makeBuilding).
-func make_building(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, middle: Vector2, size: Vector2) -> void:
-	var floors := 2 if rng.randf() < 0.5 else 1
+# Two-storey house shared by the city blocks and the starting street.
+func make_building(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, middle: Vector2, size: Vector2, entry_side := -1) -> void:
+	var floors := 2
 	var material: Material = materials[pick(["concrete", "concrete", "brick", "plaster"])]
 	var shade := rng.randf_range(0.82, 1.05)
 	var low := middle - size / 2.0
 	var high := middle + size / 2.0
 	buildings.append(Rect2(low, size))
-	var door_side := rng.randi_range(0, 3)
-	var second_door := rng.randi_range(0, 3) if rng.randf() < 0.4 else -1
+	var door_side := entry_side if entry_side >= 0 else rng.randi_range(0, 3)
 	var sides := [
 		[Vector2(low.x, high.y), Vector2(high.x, high.y)], [Vector2(high.x, low.y), Vector2(low.x, low.y)],
 		[Vector2(low.x, low.y), Vector2(low.x, high.y)], [Vector2(high.x, high.y), Vector2(high.x, low.y)],
@@ -323,33 +394,34 @@ func make_building(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, middle: V
 	for index in range(4):
 		var door := -1.0
 		if index == door_side:
-			door = rng.randf_range(0.35, 0.65)
-		elif index == second_door:
-			door = rng.randf_range(0.2, 0.8)
+			door = 0.5
 		wall_run(batch, body, chunk, material, sides[index][0], sides[index][1], floors, door, shade, middle)
 	var hole := Rect2()
 	if floors == 2:
-		var free: Array = range(4).filter(func(side): return side != door_side and side != second_door)
-		var wall: Array = sides[free[rng.randi() % free.size()]]
+		var free: Array = range(4).filter(func(side): return side != door_side)
+		var stair_side: int = (2 if entry_side == 3 else 3) if entry_side >= 0 else free[rng.randi() % free.size()]
+		var wall: Array = sides[stair_side]
 		hole = stairs(batch, body, chunk, wall[0], wall[1], middle, shade)
 		var inner := Rect2(low + Vector2(0.18, 0.18), size - Vector2(0.36, 0.36))
 		for part: Rect2 in cut(inner, hole):
 			var at := Vector3(part.get_center().x, FLOOR_HEIGHT - 0.1, part.get_center().y)
-			batch.add(materials.concrete, local(chunk, at), Vector3(part.size.x, 0.2, part.size.y), 0.0, shade * 0.88)
+			batch.add(materials.floor, local(chunk, at), Vector3(part.size.x, 0.2, part.size.y), 0.0, shade * 0.88)
 			solid(body, chunk, at, Vector3(part.size.x, 0.2, part.size.y))
+			HouseDetails.floorboards(batch, materials.wood, chunk.position, part, FLOOR_HEIGHT)
 		for index in range(rng.randi_range(2, 5)):
 			var spot := free_spot(low, high, hole)
 			batch.add(materials.rubble, local(chunk, Vector3(spot.x, FLOOR_HEIGHT + 0.1, spot.y)), Vector3(rng.randf_range(0.3, 0.9), rng.randf_range(0.12, 0.3), rng.randf_range(0.3, 0.9)), rng.randf_range(0, 3), 0.85)
-	# A broken roof slab over part of the top floor.
-	if rng.randf() < 0.62:
-		var roof := size * Vector2(rng.randf_range(0.55, 1.0), rng.randf_range(0.6, 1.0))
-		var corner := low + roof / 2.0 + (size - roof) * Vector2(rng.randi_range(0, 1), rng.randi_range(0, 1))
-		var at := Vector3(corner.x, floors * FLOOR_HEIGHT - 0.15, corner.y)
-		batch.add(materials.concrete, local(chunk, at), Vector3(roof.x, 0.3, roof.y), 0.0, shade * 0.9)
-		solid(body, chunk, at, Vector3(roof.x, 0.3, roof.y))
-		for index in range(rng.randi_range(0, 5)):
-			var lump := Vector3(corner.x + rng.randf_range(-roof.x, roof.x) / 3.0, at.y + 0.25 + rng.randf_range(0, 0.3), corner.y + rng.randf_range(-roof.y, roof.y) / 3.0)
-			batch.add(materials.rubble, local(chunk, lump), Vector3(rng.randf_range(0.4, 1.2), rng.randf_range(0.3, 0.6), rng.randf_range(0.4, 1.2)), rng.randf_range(0, 3), 0.8, Vector2(rng.randf_range(-0.3, 0.3), rng.randf_range(-0.3, 0.3)))
+	# A continuous ceiling supports a weathered pitched roof.
+	var ceiling := Vector3(middle.x, floors * FLOOR_HEIGHT - 0.1, middle.y)
+	batch.add(materials.floor, local(chunk, ceiling), Vector3(size.x, 0.2, size.y), 0.0, shade)
+	solid(body, chunk, ceiling, Vector3(size.x, 0.2, size.y))
+	HouseDetails.add(batch, materials, chunk.position, middle, size, FLOOR_HEIGHT, shade)
+	var ground := Vector3(middle.x, 0.03, middle.y)
+	batch.add(materials.floor, local(chunk, ground), Vector3(size.x, 0.06, size.y))
+	solid(body, chunk, ground, Vector3(size.x, 0.06, size.y))
+	HouseDetails.floorboards(batch, materials.wood, chunk.position, Rect2(low + Vector2(0.18, 0.18), size - Vector2(0.36, 0.36)), 0.06)
+	HouseDetails.interior(batch, materials, chunk.position, middle, size, hole, FLOOR_HEIGHT)
+
 	for index in range(rng.randi_range(2, 5)):
 		var spot := free_spot(low, high, hole)
 		batch.add(materials.rubble, local(chunk, Vector3(spot.x, 0.12, spot.y)), Vector3(rng.randf_range(0.3, 1.0), rng.randf_range(0.12, 0.35), rng.randf_range(0.3, 1.0)), rng.randf_range(0, 3), 0.85, Vector2(rng.randf_range(-0.2, 0.2), rng.randf_range(-0.2, 0.2)))
@@ -396,6 +468,16 @@ func stairs(batch: BoxBatch, body: StaticBody3D, chunk: Node3D, from: Vector2, t
 	# A rail along the open side.
 	var rail_mid := start + direction * STAIR_RUN / 2.0 + normal * (STAIR_WIDTH / 2.0 + 0.04)
 	batch.add_basis(materials.metal, local(chunk, Vector3(rail_mid.x, FLOOR_HEIGHT / 2.0 + 0.95, rail_mid.y)), Vector3(run.length(), 0.06, 0.06), basis)
+	# Vertical balusters and an upstairs guard along the open stairwell edge.
+	for index in range(9):
+		var t := float(index) / 8.0
+		var post := start + direction * STAIR_RUN * t + normal * (STAIR_WIDTH / 2.0 + 0.04)
+		batch.add(materials.metal, local(chunk, Vector3(post.x, FLOOR_HEIGHT * t + 0.45, post.y)), Vector3(0.045, 0.9, 0.045))
+		batch.add(materials.metal, local(chunk, Vector3(post.x, FLOOR_HEIGHT + 0.5, post.y)), Vector3(0.045, 1.0, 0.045))
+	var guard := Vector3(STAIR_RUN, 1.0, 0.065) if along_x else Vector3(0.065, 1.0, STAIR_RUN)
+	solid(body, chunk, Vector3(rail_mid.x, FLOOR_HEIGHT + 0.5, rail_mid.y), guard)
+	var rail := Vector3(STAIR_RUN, 0.06, 0.065) if along_x else Vector3(0.065, 0.06, STAIR_RUN)
+	batch.add(materials.metal, local(chunk, Vector3(rail_mid.x, FLOOR_HEIGHT + 1.0, rail_mid.y)), rail)
 	var end := start + direction * STAIR_RUN
 	stair_list.append([Vector3(start.x - direction.x * 0.9, 0.1, start.y - direction.y * 0.9), Vector3(end.x + direction.x * 0.9, FLOOR_HEIGHT + 0.1, end.y + direction.y * 0.9)])
 	var a := start - normal * STAIR_WIDTH / 2.0
@@ -607,6 +689,8 @@ func place_key_loot() -> void:
 
 # Nearer view range on the performance setting.
 func set_low_quality(low: bool) -> void:
+	for instance in glass_meshes:
+		instance.visibility_range_end = LOW_VIEW_RANGE if low else VIEW_RANGE
 	for instance in meshes:
 		if instance.visibility_range_end > 0.0:
 			instance.visibility_range_end = LOW_VIEW_RANGE if low else VIEW_RANGE
