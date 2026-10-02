@@ -2,12 +2,19 @@
 
     python tools/make_sounds.py
 
+<<<<<<< Updated upstream
 Writes godot/assets/audio/glass_break_1..3.ogg, tank_engine.ogg, footstep_1..6.ogg (boots on
 gritty concrete), gear_rattle.ogg (kit jostling while running), tank_cannon.ogg and heavy_mg.ogg.
+=======
+Writes godot/assets/audio/glass_break_1..3.ogg, tank_engine.ogg, tank_cannon.ogg,
+heavy_mg.ogg and the boot steps step_walk_1..4.ogg / step_run_1..4.ogg.
+>>>>>>> Stashed changes
 Pure Python with fixed seeds; ffmpeg (with libvorbis) turns the WAVs into Ogg, which
-stays out of Git LFS (*.wav is LFS-tracked in this repo).
+stays out of Git LFS (*.wav is LFS-tracked in this repo). Without ffmpeg on the PATH
+the copy bundled with the imageio-ffmpeg package is used.
 """
 import math
+import shutil
 import subprocess
 import tempfile
 import random
@@ -28,8 +35,15 @@ def write(name, samples):
         file.setsampwidth(2)
         file.setframerate(RATE)
         file.writeframes(b"".join(struct.pack("<h", int(value * gain * 32767)) for value in samples))
-    subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", str(temporary), "-c:a", "libvorbis", "-q:a", "6", str(OUT / name)], check=True)
+    subprocess.run([ffmpeg(), "-loglevel", "error", "-y", "-i", str(temporary), "-c:a", "libvorbis", "-q:a", "6", str(OUT / name)], check=True)
     temporary.unlink()
+
+
+def ffmpeg():
+    if shutil.which("ffmpeg"):
+        return "ffmpeg"
+    import imageio_ffmpeg
+    return imageio_ffmpeg.get_ffmpeg_exe()
 
 
 def biquad(samples, kind, frequency, q):
@@ -149,6 +163,7 @@ def engine():
     return out
 
 
+<<<<<<< Updated upstream
 def footstep(seed):
     """A boot on ash-covered concrete: heel strike, the sole rolling down a few
     centiseconds later, and the grit underfoot crunching between them."""
@@ -180,12 +195,115 @@ def footstep(seed):
                 break
             t = offset / RATE
             out[index] += (noise[(index * 7) % length] * 0.6 + math.sin(2 * math.pi * tone * t) * 0.4) * math.exp(-t / 0.0012) * level
+=======
+def noise(rng, count):
+    return [rng.uniform(-1.0, 1.0) for _ in range(count)]
+
+
+def step(seed, running):
+    """One boot on gritty asphalt: the heel's dull thump and the sole slapping down a
+    few hundredths later, grit crunching under it; running adds weight and the rattle
+    of kit (magazines, buckles) and a cloth swish."""
+    rng = random.Random(seed)
+    length = int(RATE * (0.34 if running else 0.27))
+    out = [0.0] * length
+    weight = 1.0 if running else 0.55
+    thump = rng.uniform(62.0, 88.0)
+    toe = rng.uniform(0.028, 0.045) if running else rng.uniform(0.055, 0.08)
+    slap = biquad(noise(rng, length), "band", rng.uniform(450.0, 750.0), 0.8)
+    crunch = biquad(noise(rng, length), "high", 2600.0, 0.7)
+    for index in range(length):
+        t = index / RATE
+        value = math.sin(2 * math.pi * thump * t) * math.exp(-t / 0.024) * weight
+        value += slap[index] * (math.exp(-t / 0.014) + 0.8 * (math.exp(-(t - toe) / 0.018) if t > toe else 0.0)) * 1.6
+        out[index] = value
+    # Grit: tiny clicks scattered over the roll of the foot.
+    for _ in range(rng.randint(22, 34)):
+        start = int(RATE * rng.uniform(0.0, toe + 0.07))
+        gain = rng.uniform(0.05, 0.22)
+        for offset in range(int(RATE * 0.004)):
+            if start + offset < length:
+                out[start + offset] += crunch[start + offset] * gain * math.exp(-offset / (RATE * 0.0012))
+    if running:
+        for _ in range(rng.randint(3, 6)):
+            start = int(RATE * rng.uniform(0.02, 0.14))
+            tone = rng.uniform(2300.0, 4200.0)
+            for offset in range(int(RATE * 0.05)):
+                if start + offset < length:
+                    t = offset / RATE
+                    out[start + offset] += math.sin(2 * math.pi * tone * t) * math.exp(-t / 0.009) * rng.uniform(0.04, 0.08)
+        swish = biquad(noise(rng, length), "band", 1800.0, 0.6)
+        for index in range(length):
+            t = index / RATE
+            out[index] += swish[index] * 0.18 * math.sin(math.pi * min(1.0, t / 0.2)) ** 2
+    fade = int(0.03 * RATE)
+    for index in range(fade):
+        out[length - 1 - index] *= index / fade
+    return out
+
+
+def echo(out, taps):
+    """City slap-back: delayed, darker copies off the buildings."""
+    dry = list(out)
+    for delay, gain, cutoff in taps:
+        shifted = [0.0] * int(delay * RATE) + biquad(dry, "low", cutoff, 0.7)
+        for index in range(min(len(out), len(shifted))):
+            out[index] += shifted[index] * gain
+    return out
+
+
+def cannon():
+    """The tank's main gun: a hard crack, the blast's punch and a deep falling boom,
+    then a long rumble with echoes rolling back off the streets."""
+    rng = random.Random(125)
+    length = int(RATE * 2.8)
+    raw = noise(rng, length)
+    crack = biquad(raw, "high", 1800.0, 0.7)
+    blast = biquad(biquad(raw, "low", 1400.0, 0.7), "low", 1400.0, 0.7)
+    rumble = biquad(biquad(noise(rng, length), "low", 180.0, 0.7), "low", 180.0, 0.7)
+    out = [0.0] * length
+    phase = 0.0
+    for index in range(length):
+        t = index / RATE
+        phase += 2 * math.pi * (52.0 * math.exp(-t / 0.5) + 26.0) / RATE
+        value = crack[index] * math.exp(-t / 0.007) * 1.2
+        value += blast[index] * math.exp(-t / 0.08) * 2.4
+        value += math.sin(phase) * math.exp(-t / 0.35) * 1.4
+        value += rumble[index] * math.exp(-t / 0.9) * 5.0
+        out[index] = value
+    out = echo(out, [(0.21, 0.32, 1200.0), (0.47, 0.2, 800.0), (0.86, 0.12, 500.0)])
+    fade = int(0.2 * RATE)
+    for index in range(fade):
+        out[length - 1 - index] *= index / fade
+    return out
+
+
+def heavy_mg():
+    """One round of a heavy machine gun: a sharp crack, the receiver's bark and a short
+    rumble. The game plays it once per round, so a burst sounds like a burst."""
+    rng = random.Random(77)
+    length = int(RATE * 0.42)
+    raw = noise(rng, length)
+    crack = biquad(raw, "high", 2400.0, 0.7)
+    bark = biquad(raw, "band", 650.0, 0.9)
+    tail = biquad(biquad(noise(rng, length), "low", 300.0, 0.7), "low", 300.0, 0.7)
+    out = [0.0] * length
+    for index in range(length):
+        t = index / RATE
+        value = crack[index] * math.exp(-t / 0.005) * 1.4
+        value += bark[index] * math.exp(-t / 0.03) * 2.2
+        value += math.sin(2 * math.pi * 105.0 * t) * math.exp(-t / 0.045) * 0.9
+        value += tail[index] * math.exp(-t / 0.13) * 3.0
+        out[index] = value
+    out = echo(out, [(0.12, 0.22, 1500.0), (0.26, 0.12, 900.0)])
+>>>>>>> Stashed changes
     fade = int(0.04 * RATE)
     for index in range(fade):
         out[length - 1 - index] *= index / fade
     return out
 
 
+<<<<<<< Updated upstream
 def gear_rattle(seed):
     """Webbing, magazines and a canteen jostling: a few soft knocks and metal ticks."""
     rng = random.Random(seed)
@@ -247,14 +365,25 @@ def machine_gun():
     return out
 
 
+=======
+>>>>>>> Stashed changes
 if __name__ == "__main__":
     OUT.mkdir(parents=True, exist_ok=True)
     for number, seed in enumerate((11, 23, 37), start=1):
         write("glass_break_%d.ogg" % number, glass(seed))
     write("tank_engine.ogg", engine())
+<<<<<<< Updated upstream
     for number in range(1, 7):
         write("footstep_%d.ogg" % number, footstep(100 + number))
     write("gear_rattle.ogg", gear_rattle(5))
     write("tank_cannon.ogg", cannon())
     write("heavy_mg.ogg", machine_gun())
     print("Wrote glass_break_1..3, tank_engine, footstep_1..6, gear_rattle, tank_cannon and heavy_mg (.ogg) to " + str(OUT))
+=======
+    write("tank_cannon.ogg", cannon())
+    write("heavy_mg.ogg", heavy_mg())
+    for number in range(1, 5):
+        write("step_walk_%d.ogg" % number, step(300 + number, False))
+        write("step_run_%d.ogg" % number, step(400 + number, True))
+    print("Wrote glass, engine, cannon, machine-gun and footstep sounds to " + str(OUT))
+>>>>>>> Stashed changes

@@ -7,7 +7,11 @@ const InputBindings = preload("res://scripts/input_bindings.gd")
 const CombatDirector = preload("res://scripts/combat/combat_director.gd")
 const CityBuilder = preload("res://scripts/city/city_builder.gd")
 const CityMap = preload("res://scripts/city/city_map.gd")
+<<<<<<< Updated upstream
 const CityNavigation = preload("res://scripts/city/navigation.gd")
+=======
+const NavigationBuilder = preload("res://scripts/world/navigation_builder.gd")
+>>>>>>> Stashed changes
 # Quick crouch-and-grab; the full kneel clip is played faster.
 const PICKUP_TIME := 0.75
 
@@ -15,6 +19,7 @@ var street: Node3D
 var city: Node3D
 var navigation: NavigationRegion3D
 var city_map: CanvasLayer
+var navigation: NavigationRegion3D
 var player: CharacterBody3D
 var hud: CanvasLayer
 var inventory: Array[String] = []
@@ -38,10 +43,17 @@ func _ready() -> void:
 	city = CityBuilder.new()
 	city.setup(street.surfaces)
 	add_child(city)
+<<<<<<< Updated upstream
 	navigation = CityNavigation.new()
 	add_child(navigation)
 	var sources: Array[Node] = [street, city]
 	navigation.bake_from.call_deferred(sources)
+=======
+	# Soldiers' walkable mesh, baked in the background once everything is placed.
+	navigation = NavigationBuilder.new()
+	add_child(navigation)
+	navigation.build.call_deferred([street, city])
+>>>>>>> Stashed changes
 	player = Survivor.new()
 	add_child(player)
 	player.position = Vector3(0, 0.1, 15)

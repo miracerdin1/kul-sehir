@@ -20,6 +20,15 @@ func run(game: Node3D) -> void:
 	# Keep this RefCounted alive while the coroutine is suspended.
 	game.set_meta("qa_runner", self)
 	await frames(game, 8)
+	# Armour only shoots in the tests about armour.
+	for vehicle in game.get_tree().get_nodes_in_group("armored_vehicle"):
+		vehicle.weapons_free = false
+	if "--soldiers-only" in OS.get_cmdline_user_args():
+		game.start_game()
+		await preload("res://tests/soldier_tank_qa.gd").new().run(game, self)
+		print("SOLDIER QA RESULT: %d failures" % failures.size())
+		game.get_tree().quit(0 if failures.is_empty() else 1)
+		return
 	if "--armor-only" in OS.get_cmdline_user_args():
 		game.start_game()
 		await preload("res://tests/armor_qa.gd").new().run(game, self)
@@ -138,6 +147,7 @@ func run(game: Node3D) -> void:
 	await preload("res://tests/houses_qa.gd").new().run(game, self)
 	await preload("res://tests/aim_bleed_qa.gd").new().run(game, self)
 	await preload("res://tests/vehicles_vault_qa.gd").new().run(game, self)
+	await preload("res://tests/soldier_tank_qa.gd").new().run(game, self)
 	await check_combat(game)
 	game.ambient.stop()
 	game.player.footstep.stop()

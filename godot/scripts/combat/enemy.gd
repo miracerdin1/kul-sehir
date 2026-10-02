@@ -1,9 +1,15 @@
 extends CharacterBody3D
 # A soldier carried over from the HTML reference (spawnEnemy, enemySees, updateEnemy,
 # enemyShoot): patrols between waypoints, notices the survivor by sight or noise,
+<<<<<<< Updated upstream
 # hunts the last known position and fires in bursts. Once the city's walkable area is
 # baked, soldiers follow paths through doorways and up stairs: patrols sometimes sweep
 # a house, and a hunt follows the survivor inside. They open closed doors on the way.
+=======
+# hunts the last known position and fires in bursts. Walks the navigation mesh, so
+# it follows the survivor into houses and up their stairs, opening doors on the way,
+# and now and then searches a house on patrol. Its boots can be heard coming.
+>>>>>>> Stashed changes
 
 const AssetFactory = preload("res://scripts/asset_factory.gd")
 const ArmedBody = preload("res://scripts/combat/armed_body.gd")
@@ -44,6 +50,7 @@ var motion := ""
 var last_position := Vector3.ZERO
 var frame_moved := 0.0
 var rng := RandomNumberGenerator.new()
+<<<<<<< Updated upstream
 # Patrol legs walked so far.
 var legs := 0
 var steps: AudioStreamPlayer3D
@@ -51,6 +58,19 @@ var gear: AudioStreamPlayer3D
 var step_distance := 0.0
 var agent: NavigationAgent3D
 var door_check := 0.0
+=======
+var footstep: AudioStreamPlayer3D
+var step_distance := 0.0
+# Route along the navigation mesh to path_goal; path_index is the next corner.
+var path := PackedVector3Array()
+var path_index := 0
+var path_goal := Vector3.INF
+var path_age := 0.0
+var door_check := 0.0
+# Searching a house on patrol: linger a little longer once inside.
+var visiting := false
+var legs := 0
+>>>>>>> Stashed changes
 
 
 func setup(combat_director: Node, survivor: CharacterBody3D, at: Vector3, route: Array[Vector3], gun: String) -> void:
@@ -92,6 +112,7 @@ func _ready() -> void:
 	armed = ArmedBody.new(animation, model, visual)
 	armed.set_weapon(weapon)
 	visual.rotation.y = rng.randf_range(-PI, PI)
+<<<<<<< Updated upstream
 	# Boots you can hear coming: a walking patrol from about 20 m, a running one further.
 	steps = AudioStreamPlayer3D.new()
 	steps.position.y = 0.1
@@ -111,6 +132,10 @@ func _ready() -> void:
 	agent.target_desired_distance = 0.6
 	agent.path_max_distance = 4.0
 	add_child(agent)
+=======
+	footstep = Footsteps.player(34.0)
+	add_child(footstep)
+>>>>>>> Stashed changes
 	play("Idle")
 	pick_waypoint()
 
@@ -163,6 +188,11 @@ func house_point() -> Vector3:
 
 
 func pick_waypoint() -> void:
+	visiting = false
+	legs += 1
+	# The first leg follows the road; after that, now and then a house gets searched.
+	if legs > 1 and rng.randf() < 0.3 and pick_house():
+		return
 	if waypoints.is_empty():
 		goal = global_position
 		return
@@ -188,14 +218,47 @@ func pick_waypoint() -> void:
 	goal += Vector3(rng.randf_range(-2, 2), 0, rng.randf_range(-2, 2))
 
 
+# A room in a nearby house, on either floor, that the mesh can reach.
+func pick_house() -> bool:
+	var nav := navigation()
+	var city: Node = director.game.city if director.game else null
+	if nav == null or not nav.baked or city == null:
+		return false
+	var nearby: Array = city.buildings.filter(func(house: Rect2): return house.get_center().distance_to(Vector2(global_position.x, global_position.z)) < 45.0)
+	if nearby.is_empty():
+		return false
+	var house: Rect2 = nearby[rng.randi() % nearby.size()]
+	var inner := house.grow(-1.3)
+	for attempt in 4:
+		var level := rng.randi_range(0, 1)
+		var spot := Vector3(rng.randf_range(inner.position.x, inner.end.x), level * city.FLOOR_HEIGHT + 0.2, rng.randf_range(inner.position.y, inner.end.y))
+		var reached: Vector3 = nav.closest(spot)
+		if inner.has_point(Vector2(reached.x, reached.z)) and absf(reached.y - spot.y) < 0.6:
+			goal = reached
+			visiting = true
+			return true
+	return false
+
+
+func navigation() -> NavigationRegion3D:
+	return director.game.get("navigation") if director and director.game else null
+
+
 func hear(at: Vector3) -> void:
 	if not alive or state == "combat":
 		return
 	state = "investigate"
+<<<<<<< Updated upstream
 	goal = at + Vector3(rng.randf_range(-5, 5), 0, rng.randf_range(-5, 5))
 	var region := walkable()
 	if region:
 		goal = region.snap(goal)
+=======
+	goal = at + Vector3(rng.randf_range(-3, 3), 0, rng.randf_range(-3, 3))
+	var nav := navigation()
+	if nav and nav.baked:
+		goal = nav.closest(goal + Vector3.UP * 0.5)
+>>>>>>> Stashed changes
 	aware = maxf(aware, 0.55)
 	wait_time = 0.0
 
@@ -302,8 +365,8 @@ func _physics_process(delta: float) -> void:
 				face_target = player.global_position
 			elif wait_time > 0.0:
 				wait_time -= delta
-			elif steer(goal, PATROL_SPEED, delta):
-				wait_time = rng.randf_range(2.0, 5.0)
+			elif navigate(goal, PATROL_SPEED, delta):
+				wait_time = rng.randf_range(4.0, 8.0) if visiting else rng.randf_range(2.0, 5.0)
 				pick_waypoint()
 			else:
 				moving_speed = PATROL_SPEED
@@ -314,7 +377,7 @@ func _physics_process(delta: float) -> void:
 				if wait_time <= 0.0:
 					state = "patrol"
 					pick_waypoint()
-			elif steer(goal, INVESTIGATE_SPEED, delta):
+			elif navigate(goal, INVESTIGATE_SPEED, delta):
 				wait_time = rng.randf_range(4.0, 7.0)
 			else:
 				moving_speed = INVESTIGATE_SPEED
@@ -325,7 +388,7 @@ func _physics_process(delta: float) -> void:
 				lost_time = 0.0
 				face_target = player.global_position
 				if distance > 20.0:
-					steer(player.global_position, CHASE_SPEED, delta)
+					navigate(player.global_position, CHASE_SPEED, delta)
 					moving_speed = CHASE_SPEED
 				elif distance < 5.0:
 					steer(global_position - offset, 2.4, delta)
@@ -336,7 +399,7 @@ func _physics_process(delta: float) -> void:
 			else:
 				lost_time += delta
 				cooldown = maxf(cooldown, 0.4)
-				var arrived := steer(last_known, 3.2, delta)
+				var arrived := navigate(last_known, 3.2, delta)
 				moving_speed = 0.0 if arrived else 3.2
 				if lost_time > 10.0 or (arrived and lost_time > 3.0):
 					state = "investigate"
@@ -367,10 +430,54 @@ func _physics_process(delta: float) -> void:
 				gear.pitch_scale = rng.randf_range(0.85, 1.1)
 				gear.play()
 	var clip := "Idle" if ground_speed < 0.2 else ("Run" if ground_speed > 2.3 else "Walk")
+	if is_on_floor() and ground_speed > 0.2:
+		step_distance += ground_speed * delta
+		if step_distance > (1.25 if clip == "Run" else 0.8):
+			step_distance = 0.0
+			Footsteps.step(footstep, clip == "Run", -4.0 if clip == "Run" else -9.0)
 	play(clip)
 	animation.speed_scale = clampf(ground_speed / CLIP_SPEED[clip], 0.6, 1.5) if CLIP_SPEED.has(clip) else 1.0
 	animation.advance(delta)
 	armed.update(delta, aiming, player.global_position + Vector3(0, player.camera_height * 0.85, 0))
+
+
+# Walks the navigation mesh towards a point: round corners, through doorways and up
+# stairs. Until the mesh is baked (or off it) this is a straight steer. Returns
+# true on arrival.
+func navigate(target: Vector3, speed: float, delta: float) -> bool:
+	var nav := navigation()
+	if nav == null or not nav.baked:
+		return steer(target, speed, delta)
+	path_age += delta
+	if path_goal.distance_to(target) > 1.0 or path_age > 1.5 or path.is_empty():
+		path = nav.path(global_position, target)
+		path_index = 1
+		path_goal = target
+		path_age = 0.0
+	open_doors(delta)
+	while path_index < path.size():
+		var corner := path[path_index]
+		var flat := Vector2(corner.x - global_position.x, corner.z - global_position.z)
+		# Corners on another floor count as reached only at their own height.
+		if flat.length() > 0.45 or absf(corner.y - global_position.y) > 1.2:
+			break
+		path_index += 1
+	if path_index >= path.size():
+		return steer(target, speed, delta)
+	steer(path[path_index], speed, delta)
+	return false
+
+
+# Closed doors on the way swing open as the soldier reaches them.
+func open_doors(delta: float) -> void:
+	door_check -= delta
+	if door_check > 0.0 or not director.game or not director.game.city:
+		return
+	door_check = 0.25
+	var city: Node = director.game.city
+	var door: Dictionary = city.nearest_door(global_position, 1.5)
+	if not door.is_empty() and not door.open:
+		city.toggle_door(door)
 
 
 # Moves toward a point and side-steps when blocked (moveEnemy). Returns true on arrival.

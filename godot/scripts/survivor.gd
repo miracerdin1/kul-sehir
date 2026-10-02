@@ -108,10 +108,14 @@ func _ready() -> void:
 		if armed.rig:
 			animation.advance(0.0)
 	create_camera()
+<<<<<<< Updated upstream
 	footstep = AudioStreamPlayer3D.new()
 	footstep.stream = Footsteps.step()
 	footstep.volume_db = -13.0
 	footstep.max_distance = 15.0
+=======
+	footstep = Footsteps.player(25.0)
+>>>>>>> Stashed changes
 	add_child(footstep)
 	gear = AudioStreamPlayer3D.new()
 	gear.stream = Footsteps.gear()
@@ -276,6 +280,7 @@ func _physics_process(delta: float) -> void:
 		step_distance += ground_speed * delta
 		if step_distance > stride_length():
 			step_distance = 0.0
+<<<<<<< Updated upstream
 			var gait := "sneak" if stance != "stand" else ("sprint" if motion == "Sprint" else ("run" if motion == "Run" else "walk"))
 			Footsteps.play(footstep, gait)
 			# Kit jostles on every other running stride.
@@ -283,6 +288,12 @@ func _physics_process(delta: float) -> void:
 				gear.volume_db = -20.0 if gait == "run" else -15.0
 				gear.pitch_scale = randf_range(0.9, 1.1)
 				gear.play()
+=======
+			# Soft and quiet crouched or crawling, heavier with every gear of speed.
+			var running := motion in ["Run", "Sprint"]
+			var loudness := -22.0 if stance != "stand" else (-8.0 if motion == "Sprint" else (-11.0 if running else -15.0))
+			Footsteps.step(footstep, running, loudness)
+>>>>>>> Stashed changes
 	update_animation(ground_speed, delta)
 	if armed and armed.rig:
 		animation.advance(delta)
@@ -414,7 +425,11 @@ func end_vault() -> void:
 	motion = ""
 	if animation:
 		animation.speed_scale = 1.0
+<<<<<<< Updated upstream
 	Footsteps.play(footstep, "run", -1.0)
+=======
+	Footsteps.step(footstep, true, -9.0)
+>>>>>>> Stashed changes
 
 
 func vaulting() -> bool:
