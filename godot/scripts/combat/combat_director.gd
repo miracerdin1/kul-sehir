@@ -10,6 +10,11 @@ const Weapons = preload("res://scripts/combat/weapons.gd")
 const MAX_ENEMIES := 4
 # More soldiers roam the city as the days pass (spawnManager: 5 + day, at most 11).
 const ENEMY_CAP := 7
+# A wound bleeds 0.5 HP/s (the HTML rate) for 18-32 s, then clots on its own: about 9-16 HP
+# lost without a bandage instead of draining to death.
+const BLEED_RATE := 0.5
+const BLEED_MIN := 18.0
+const BLEED_MAX := 32.0
 # Patrol points along the street (x across, z along); soldiers wander between them.
 const ROUTE: Array[Vector3] = [
 	Vector3(-3, 0, -24), Vector3(3, 0, -24), Vector3(3.5, 0, -12), Vector3(-3, 0, -6),
@@ -216,6 +221,12 @@ func enemy_killed(_enemy: Node, head: bool) -> void:
 	say("Kafadan vuruş. Düşman etkisiz." if head else "Düşman etkisiz.")
 
 
+func start_bleeding() -> void:
+	player.bleeding = true
+	player.bleed_time = rng.randf_range(BLEED_MIN, BLEED_MAX)
+	say("Kanaman var. Sargı sar (H).")
+
+
 func say(text: String) -> void:
 	game.hud.notify(text)
 
@@ -232,10 +243,14 @@ func _physics_process(delta: float) -> void:
 		conditions.daylight = state.daylight
 		conditions.visibility = clampf(2.0 / maxf(float(climate.state.values.fog), 0.001), 30.0, 170.0)
 	if player.bleeding:
-		player.hp -= 0.5 * delta
+		player.hp -= BLEED_RATE * delta
+		player.bleed_time -= delta
 		if player.hp <= 0.0:
 			kill_player("Kan kaybı")
 			return
+		if player.bleed_time <= 0.0:
+			player.bleeding = false
+			say("Kanama kendiliğinden durdu.")
 	elif player.hp < 100.0 and player.warmth > 45.0:
 		player.hp = minf(100.0, player.hp + 0.22 * delta)
 	if spawning:

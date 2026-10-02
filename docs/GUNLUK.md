@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-02 — Claude — dal: claude/tufek-zoom-kanama
+Yapılan: Miraç'ın iki isteği. (1) Tüfekle sağ tık nişan alınca kamera yakınlaşıyor (görüş açısı 66° → 30°, yaklaşık 2 kat); nişan bırakılınca geri açılıyor. Yakınlaşmışken fare hassasiyeti görüş açısıyla orantılı düşüyor, nişangâh ekranda aynı hızda kayıyor. Diğer silahlarda değişiklik yok. (2) Kanama artık sonsuza kadar sürmüyor: yara 18–32 sn kanıyor (0.5 can/sn, HTML hızı, toplam ~9–16 can), sonra "Kanama kendiliğinden durdu." mesajıyla duruyor; sargı yine anında durduruyor. Kanamayı başlatma `combat_director.start_bleeding()` içinde toplandı.
+Değişen dosyalar: `godot/scripts/survivor.gd`, `godot/scripts/combat/combat_director.gd`, `godot/scripts/combat/enemy.gd`, `godot/tests/aim_bleed_qa.gd` (yeni), `godot/tests/prototype_qa.gd` (yalnızca yeni testi çağıran 1 satır; Codex'in satırındaki dosya, PR #12 birleştiği için eski kilit sayıldı), `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: Bulutta Godot 4.7.2 headless `--smoke-test` 0 hata (yer tutucu iskeletle; yeni 5 kontrol: tüfek nişanında görüş açısı 35° altı, bırakınca eski açıya dönüş, kanamanın başlaması, kendiliğinden durması ve sonra canın azalmaması). Gerçek SWAT modeliyle ve MX450 üzerinde oynanarak denenmedi.
+Açık kalan / diğer ajana not: Codex: `SAHIPLIK.md`'deki `codex/iki-katli-evler` satırı PR #12 birleştiği için silinebilir. Dürbün görseli/nişangâh kaplaması yok, yalnızca yakınlaşma.
+
 ## 2026-10-02 — Codex — dal: codex/iki-katli-evler
 Yapılan: Güncel origin/main (3d4a6a6) alındı; Miraç'ın Claude'dan devam et talimatıyla evler devralındı. Başlangıç sokağı dahil 50 ev ortak iki katlı sisteme geçti: açılan kapılar, merdiven ve üst kat korkuluğu, eğimli çatı/baca, hizalı çerçeveli pencereler, söve ve silmeler, ahşap döşeme ve raflar. Şeffaf cam ateş/yumruk/bıçak ile kırılır; çarpışma ve yalnızca ilgili MultiMesh örneği kaldırılır, kısa parça efekti/sentezlenen ses oluşur ve yakındaki askerler uyarılır. Açılan kapının çarpışmasının kapalı konumda kalması düzeltildi (menteşe fizik tween'i için sync_to_physics kapatıldı). Sabit ayrıntılar blok başına birleştirilir; performans ayarında camlar da binayla aynı mesafede gizlenir.
 Değişen dosyalar: godot/scripts/street.gd, godot/scripts/city/{city_builder,box_batch,house_details,window_batch,breakable_glass}.gd, godot/scripts/combat/player_combat.gd, godot/tests/{prototype_qa,houses_qa}.gd, README.md, docs/SAHIPLIK.md, docs/GUNLUK.md.
