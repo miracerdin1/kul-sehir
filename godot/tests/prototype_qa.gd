@@ -131,6 +131,7 @@ func run(game: Node3D) -> void:
 	await check_city(game)
 	await preload("res://tests/houses_qa.gd").new().run(game, self)
 	await preload("res://tests/aim_bleed_qa.gd").new().run(game, self)
+	await preload("res://tests/vehicles_vault_qa.gd").new().run(game, self)
 	await check_combat(game)
 	game.ambient.stop()
 	game.player.footstep.stop()

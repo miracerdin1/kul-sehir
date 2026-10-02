@@ -557,17 +557,32 @@ func create_boundary() -> void:
 			meshes.append_array(batch.commit(chunk, VIEW_RANGE + 40.0))
 
 
-# A point on a road, away from the first street (streetPt).
-func road_point() -> Vector3:
-	for attempt in range(20):
-		var along := rng.randf_range(-BOUND.x + 6.0, BOUND.x - 6.0)
+# A point on a road, away from the first street (streetPt). With an edge, the point keeps
+# at least that far from the road's centre line and clear of junctions, so the armour
+# patrolling the centre lines has a clear lane; road_yaw is then the road's direction.
+var road_yaw := 0.0
+
+
+func road_point(edge := 0.0) -> Vector3:
+	for attempt in range(40):
+		var lateral := rng.randf_range(-4, 4)
+		if edge > 0.0:
+			lateral = rng.randf_range(edge, maxf(edge, 4.6)) * (1.0 if rng.randf() < 0.5 else -1.0)
 		var point: Vector3
-		if rng.randf() < 0.5:
-			point = Vector3(pick(ROADS_X) + rng.randf_range(-4, 4), 0, rng.randf_range(-BOUND.y + 6.0, BOUND.y - 6.0))
+		var vertical := rng.randf() < 0.5
+		if vertical:
+			point = Vector3(pick(ROADS_X) + lateral, 0, rng.randf_range(-BOUND.y + 6.0, BOUND.y - 6.0))
+			road_yaw = PI / 2.0
 		else:
-			point = Vector3(along, 0, pick(ROADS_Z) + rng.randf_range(-4, 4))
+			point = Vector3(rng.randf_range(-BOUND.x + 6.0, BOUND.x - 6.0), 0, pick(ROADS_Z) + lateral)
+			road_yaw = 0.0
 		if ARMOR_POSITIONS.any(func(at): return at.distance_to(point) < 8.0):
 			continue
+		if edge > 0.0:
+			var crossings: Array[float] = ROADS_Z if vertical else ROADS_X
+			var along := point.z if vertical else point.x
+			if crossings.any(func(road): return absf(road - along) < ROAD_HALF + 7.0):
+				continue
 		if not STREET_AREA.grow(3.0).has_point(Vector2(point.x, point.z)):
 			return point
 	return Vector3(ROADS_X[0], 0, ROADS_Z[0])
@@ -579,13 +594,15 @@ func create_street_props() -> void:
 	var batch := BoxBatch.new()
 	var body: StaticBody3D = chunk.get_meta("body")
 	for index in range(12):
-		burnt_car(batch, body, chunk, road_point(), rng.randf_range(0, TAU))
+		var spot := road_point(3.7)
+		burnt_car(batch, body, chunk, spot, road_yaw + rng.randf_range(-0.2, 0.2) + (PI if rng.randf() < 0.5 else 0.0))
 	for index in range(32):
-		rubble_pile(batch, body, chunk, road_point(), rng.randf_range(0.5, 1.1))
+		rubble_pile(batch, body, chunk, road_point(3.9), rng.randf_range(0.5, 1.1))
 	for index in range(7):
-		sandbags(batch, body, chunk, road_point(), rng.randf_range(0, TAU), rng.randf_range(3, 5))
+		var spot := road_point(3.3)
+		sandbags(batch, body, chunk, spot, road_yaw + rng.randf_range(-0.12, 0.12), rng.randf_range(3, 5))
 	for index in range(14):
-		var at := road_point()
+		var at := road_point(4.3)
 		var tilt := rng.randf() < 0.4
 		var lean := Vector2(rng.randf_range(-0.6, 0.6), rng.randf_range(-0.6, 0.6)) if tilt else Vector2.ZERO
 		batch.add(materials.dark, local(chunk, at + Vector3(0, 2.6, 0)), Vector3(0.16, 5.2, 0.16), 0.0, 1.0, lean)
@@ -599,9 +616,10 @@ func create_street_props() -> void:
 		var at: Vector3 = ARMOR_POSITIONS[index]
 		var vehicle := ArmoredVehicle.new()
 		vehicle.kind = "tank" if index % 2 == 0 else "apc"
-		add_child(vehicle)
+		vehicle.mobile = true
 		vehicle.position = at
 		vehicle.rotation.y = PI / 2.0 if index == 3 else 0.0
+		add_child(vehicle)
 		loot.append(["ammo762", rng.randi_range(10, 20), at + Vector3(rng.randf_range(-4, 4), 0.02, 4.5)])
 	# Spread over the whole map, so this mesh has no view range.
 	meshes.append_array(batch.commit(chunk, 0.0))

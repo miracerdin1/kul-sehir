@@ -7,7 +7,8 @@ const InputBindings = preload("res://scripts/input_bindings.gd")
 const CombatDirector = preload("res://scripts/combat/combat_director.gd")
 const CityBuilder = preload("res://scripts/city/city_builder.gd")
 const CityMap = preload("res://scripts/city/city_map.gd")
-const PICKUP_TIME := 1.3
+# Quick crouch-and-grab; the full kneel clip is played faster.
+const PICKUP_TIME := 0.75
 
 var street: Node3D
 var city: Node3D
@@ -94,6 +95,16 @@ func start_game() -> void:
 		hud.notify("Yakıt kaldırımda, erzak depoda. Metal parça bariyerlerin yakınında.")
 		if not has_meta("qa_runner"):
 			director.start()
+			drive_vehicles(true)
+
+
+# The city's tanks and APCs patrol the roads once the game is under way.
+func drive_vehicles(on: bool) -> void:
+	for vehicle in get_tree().get_nodes_in_group("armored_vehicle"):
+		if vehicle.mobile:
+			vehicle.director = director if on else null
+			if not on:
+				vehicle.set_engine(false)
 
 
 func on_player_died(_cause: String) -> void:

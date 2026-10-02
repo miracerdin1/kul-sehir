@@ -18,7 +18,7 @@ Yeni klondan sonra aşağıdaki hazırlık komutlarını çalıştır. Godot ça
 | Alt (basılı) | Yürü |
 | C veya Ctrl | Çömel / kalk |
 | Z | Yere yat / kalk |
-| Boşluk | Zıpla (çömelik veya yatıkken ayağa kalk) |
+| Boşluk | Zıpla; bel hizasında duvar, pencere denizliği veya kırık camın önündeyken üstünden atla (çömelik veya yatıkken ayağa kalk) |
 | E | Yakındaki malzemeyi veya silahı al, cesedi ara, kapıyı aç/kapat, sobayı kullan |
 | Sağ tık | Nişan al / bırak (tüfekte yakınlaştırır) |
 | Sol tık | Ateş et / bıçak veya yumruk; camları kır |
@@ -44,7 +44,7 @@ Kaldırımdaki yakıt bidonunu, **Erzak Deposu** içindeki erzağı ve sokağın
 
 Sobanın yanındaki RPG, roket ve mayınları **E** ile topla. **5** ile RPG seç, sağ tıkla nişanı aç/kapat, sol tıkla ateş et; **R** ile roket doldur. **G** yere mayın bırakır (en fazla 8 etkin mayın). Mayın 2 saniye sonra yakındaki asker veya aracı algılar; ateş ederek de patlatılabilir. Patlama sana da zarar verir, uzaklaş.
 
-Şehir yollarında iki tank ve iki ZPT var; ilk tank başlangıç sokağının güney çıkışında. Bu sürümde araçlar park hâlindedir, sürülemez ve ateş etmez. Tank iki RPG isabetiyle, ZPT tek isabetle imha olur; yakından mayın ikisini de imha eder. Enkaz siper olarak kalır. Duvarlar patlama hasarını keser; yakındaki camlar kırılır. Araçlar ve patlayıcı modelleri mevcut modüler parçalarla üretilir.
+Şehir yollarında iki tank ve iki ZPT var; ilk tank başlangıç sokağının güney çıkışında. Araçlar yollarda devriye gezer: kavşaklarda döner (tank yerinde döner), önlerine çıkan insan veya araç için durur, uzun süre yol kapalıysa geri döner. Tank paletleri ve tekerleri hareketle döner; tank kulesi sokağı tarar ve oyuncuyu görünce ona döner. Oyuncu araç süremez, araçlar ateş etmez. Tank iki RPG isabetiyle, ZPT tek isabetle imha olur; yakından mayın ikisini de imha eder. Enkaz siper olarak kalır. Duvarlar patlama hasarını keser; yakındaki camlar kırılır. Araçlar ve patlayıcı modelleri mevcut modüler parçalarla üretilir.
 
 ## Neler var?
 
