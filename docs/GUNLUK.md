@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-02 — Codex — dal: codex/zirhli-araclar
+Yapılan: Güncel origin/main (6654077) üzerinden iki tank ve iki ZPT, RPG ve yere bırakılan mayın eklendi. Araçlar park halinde; tank iki RPG, ZPT bir RPG veya yakındaki mayınla imha edilir, enkaz siper olarak kalır. Sobanın yanında E ile RPG/roket/mayın alınır; 5 RPG, R doldurma, G mayın. Mayın iki saniyede kurulur; yakındaki asker/araç veya mermiyle patlar. Patlama duvar arkasına geçmez, cam kırar ve yakındaki oyuncuya da zarar verir. Görseller ve ses kodda üretilir; dış varlık eklenmedi. Sağ tık nişan aç/kapa korundu.
+Değişen dosyalar: godot/scripts/combat/armor/*, combat/{combat_director,combat_hud,gun_model,player_combat,weapons}.gd, city/city_builder.gd, input_bindings.gd, godot/tests/{armor_qa,prototype_qa}.gd, README.md, docs/SAHIPLIK.md, docs/GUNLUK.md.
+Test edilen / edilmeyen: Gerçek karakter varlıklarıyla 133 mevcut oynanış kontrolü ve Vulkan/Mobile MX450 üzerinde 14 yeni zırhlı araç/patlayıcı kontrolü hatasız. Dört ekran görüntüsü alındı; ZPT ve patlama görüntüleri incelendi. git diff --check geçti. Build/export ve yeni kapsamlı performans ölçümü yapılmadı. Codebase Memory araçları mevcut olmadığından kaynak doğrudan incelendi.
+Açık kalan / diğer ajana not: Araç sürme/araçtan ateş etme bu kapsamda yok. Eşzamanlı dal değişimi nedeniyle çalışma kul-sehir-zirhli-araclar ayrı Git worktree'sinde tamamlandı. Otomatik .import ve ilgisiz .uid değişiklikleri commit edilmedi. Odaklı test: Godot --path godot -- --smoke-test --armor-only; görüntü için --capture-armor eklenir. Birleştirme Miraç incelemesinde.
+
 ## 2026-10-02 — Claude — dal: claude/nisan-ac-kapa
 Yapılan: Miraç "sağ tık basılı tutmak saçma, bir basınca açılsın bir daha basınca kapansın" dedi. Sağ tık artık nişanı aç/kapa yapıyor (tüm silahlarda; tüfekte yakınlaştırma da aynı şekilde). Ateş tuşu basılıyken silahın kalkması değişmedi; oyuncu devre dışı kalınca (ölüm, duraklatma) nişan yine sıfırlanıyor. README kontrol tablosu güncellendi.
 Değişen dosyalar: `godot/scripts/combat/player_combat.gd` (3 satır; Codex satırındaki dosya, PR #12 birleştiği için eski kilit sayıldı), `godot/tests/aim_bleed_qa.gd`, `README.md` (1 satır), `docs/SAHIPLIK.md`, `docs/GUNLUK.md`.

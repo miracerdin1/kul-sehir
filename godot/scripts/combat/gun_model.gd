@@ -6,6 +6,14 @@ extends RefCounted
 # Stand-in parts: [shape, position, size, x tilt, material]. Shapes: "box", "tube"
 # (cylinder along -Z, size.x = radius, size.z = length) and "tip" (wedge pointing -Z).
 const PARTS := {
+	"rpg": [
+		["tube", Vector3(0, 0.08, -0.12), Vector3(0.055, 0, 0.95), 0.0, "metal"],
+		["tube", Vector3(0, 0.08, 0.38), Vector3(0.085, 0, 0.13), 0.0, "dark"],
+		["tube", Vector3(0, 0.08, -0.62), Vector3(0.09, 0, 0.25), 0.0, "wood"],
+		["tip", Vector3(0, 0.08, -0.82), Vector3(0.11, 0.15, 0.18), 0.0, "metal"],
+		["box", Vector3(0, -0.035, 0), Vector3(0.045, 0.15, 0.07), 0.15, "wood"],
+		["box", Vector3(-0.07, 0.15, -0.2), Vector3(0.04, 0.12, 0.12), 0.0, "dark"],
+	],
 	"pistol": [
 		["box", Vector3(0, 0.046, -0.06), Vector3(0.03, 0.032, 0.19), 0.0, "metal"],
 		["box", Vector3(0, 0.02, -0.055), Vector3(0.027, 0.022, 0.16), 0.0, "frame"],
@@ -47,7 +55,7 @@ const PARTS := {
 		["tip", Vector3(0, 0.004, -0.19), Vector3(0.004, 0.03, 0.04), 0.0, "blade"],
 	],
 }
-const MUZZLES := {"pistol": Vector3(0, 0.046, -0.162), "shotgun": Vector3(0, 0.052, -0.65), "rifle": Vector3(0, 0.045, -0.56), "knife": Vector3(0, 0, -0.21)}
+const MUZZLES := {"rpg": Vector3(0, 0.08, -0.92), "pistol": Vector3(0, 0.046, -0.162), "shotgun": Vector3(0, 0.052, -0.65), "rifle": Vector3(0, 0.045, -0.56), "knife": Vector3(0, 0, -0.21)}
 
 
 static func build(kind: String) -> Node3D:

@@ -24,6 +24,8 @@ Yeni klondan sonra aşağıdaki hazırlık komutlarını çalıştır. Godot ça
 | Sol tık | Ateş et / bıçak veya yumruk; camları kır |
 | R | Şarjör değiştir |
 | 1 – 4 | Silah seç (yumruk, bıçak, tabanca/pompalı, tüfek) |
+| 5 | RPG seç |
+| G | Mayın kur (2 sn sonra etkin) |
 | H | Sargı bezi (kanamayı durdurur) |
 | M | Şehir haritası |
 | B | Çantayı aç veya kapat |
@@ -37,6 +39,12 @@ Oyundan başka pencereye geçildiğinde oynanış duraklar. Menüde **Görüntü
 ### İlk görev
 
 Kaldırımdaki yakıt bidonunu, **Erzak Deposu** içindeki erzağı ve sokağın sonuna doğru sağ kaldırımdaki metal parçayı topla. Sobaya dönüp **E** ile hazırlığı tamamla. Sonrasında sokakta dolaşmaya devam edebilirsin. Sobanın yanında durmak vücut ısısını artırır.
+
+## Zırhlı araçlar ve patlayıcılar
+
+Sobanın yanındaki RPG, roket ve mayınları **E** ile topla. **5** ile RPG seç, sağ tıkla nişanı aç/kapat, sol tıkla ateş et; **R** ile roket doldur. **G** yere mayın bırakır (en fazla 8 etkin mayın). Mayın 2 saniye sonra yakındaki asker veya aracı algılar; ateş ederek de patlatılabilir. Patlama sana da zarar verir, uzaklaş.
+
+Şehir yollarında iki tank ve iki ZPT var; ilk tank başlangıç sokağının güney çıkışında. Bu sürümde araçlar park hâlindedir, sürülemez ve ateş etmez. Tank iki RPG isabetiyle, ZPT tek isabetle imha olur; yakından mayın ikisini de imha eder. Enkaz siper olarak kalır. Duvarlar patlama hasarını keser; yakındaki camlar kırılır. Araçlar ve patlayıcı modelleri mevcut modüler parçalarla üretilir.
 
 ## Neler var?
 

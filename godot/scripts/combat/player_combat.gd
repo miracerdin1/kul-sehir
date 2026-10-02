@@ -10,9 +10,10 @@ signal message(text: String)
 
 var player: CharacterBody3D
 var director: Node
-var owned := {"knife": false, "pistol": false, "shotgun": false, "rifle": false}
-var ammo := {"ammo9": 0, "ammo762": 0, "shell": 0}
-var magazine := {"pistol": 0, "shotgun": 0, "rifle": 0}
+var owned := {"knife": false, "pistol": false, "shotgun": false, "rifle": false, "rpg": false}
+var ammo := {"ammo9": 0, "ammo762": 0, "shell": 0, "rockets": 0}
+var magazine := {"pistol": 0, "shotgun": 0, "rifle": 0, "rpg": 0}
+var mines := 0
 var bandages := 1
 var supplies := {"food": 0, "water": 0}
 var weapon := "fists"
@@ -46,9 +47,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		reload()
 	if event.is_action_pressed("bandage"):
 		bandage()
-	for slot in 4:
+	if event.is_action_pressed("place_mine") and not event.is_echo():
+		director.explosives.place_mine()
+	for slot in 5:
 		if event.is_action_pressed("weapon_%d" % (slot + 1)):
-			select(["melee", "pistol", "shotgun", "rifle"][slot])
+			select(["melee", "pistol", "shotgun", "rifle", "rpg"][slot])
 	if event is InputEventMouseButton and event.pressed and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 		if event.button_index in [MOUSE_BUTTON_WHEEL_UP, MOUSE_BUTTON_WHEEL_DOWN]:
 			cycle(1 if event.button_index == MOUSE_BUTTON_WHEEL_DOWN else -1)
@@ -89,7 +92,7 @@ func give(kind: String, amount: int) -> bool:
 			owned.knife = true
 			if weapon == "fists":
 				weapon = "knife"
-		"pistol", "shotgun", "rifle":
+		"pistol", "shotgun", "rifle", "rpg":
 			var gun: Dictionary = Weapons.DATA[kind]
 			if owned[kind]:
 				ammo[gun.ammo] += amount
@@ -99,6 +102,8 @@ func give(kind: String, amount: int) -> bool:
 				ammo[gun.ammo] += maxi(0, amount - gun.mag)
 				if data().get("melee", false) or kind == "rifle":
 					select(kind)
+		"mine":
+			mines += amount
 		"bandage":
 			bandages += amount
 		"food", "water":
@@ -113,13 +118,15 @@ func give(kind: String, amount: int) -> bool:
 # Lines for the bag screen.
 func summary() -> Array[String]:
 	var lines: Array[String] = []
-	for kind in ["knife", "pistol", "shotgun", "rifle"]:
+	for kind in ["knife", "pistol", "shotgun", "rifle", "rpg"]:
 		if owned[kind]:
 			var gun: Dictionary = Weapons.DATA[kind]
 			lines.append(Weapons.NAMES[kind] + ("   %d / %d" % [magazine[kind], ammo[gun.ammo]] if gun.has("ammo") else ""))
 	for kind in ammo:
-		if ammo[kind] > 0 and not owned[{"ammo9": "pistol", "ammo762": "rifle", "shell": "shotgun"}[kind]]:
+		if ammo[kind] > 0 and not owned[{"ammo9": "pistol", "ammo762": "rifle", "shell": "shotgun", "rockets": "rpg"}[kind]]:
 			lines.append(Weapons.label(kind, ammo[kind]))
+	if mines > 0:
+		lines.append(Weapons.label("mine", mines))
 	if bandages > 0:
 		lines.append(Weapons.label("bandage", bandages))
 	for kind in supplies:
@@ -181,6 +188,12 @@ func attack() -> void:
 	var muzzle: Vector3 = player.armed.muzzle_position() if player.armed else origin
 	director.muzzle_flash(muzzle)
 	director.alert_noise(player.global_position, gun.noise)
+	if gun.get("rocket", false):
+		var launch_point := player.global_position + Vector3.UP * 1.35
+		var target := aim_point()
+		director.explosives.launch(launch_point, (target - launch_point).normalized())
+		fired.emit(weapon)
+		return
 	for pellet in gun.get("pellets", 1):
 		var direction := aim_direction()
 		direction += Vector3(rng.randf_range(-spread, spread), rng.randf_range(-spread, spread), rng.randf_range(-spread, spread))
@@ -202,6 +215,9 @@ func shoot_ray(origin: Vector3, direction: Vector3, muzzle: Vector3, gun: Dictio
 	if hit.is_empty():
 		return
 	var target: Object = hit.collider
+	if target.is_in_group("explosive_charge"):
+		target.detonate()
+		return
 	if target.is_in_group("breakable_glass"):
 		break_window(target, direction)
 		return
