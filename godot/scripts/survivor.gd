@@ -12,6 +12,9 @@ const CROUCH_SPEED := 1.3
 const PRONE_SPEED := 0.55
 const GRAVITY := 16.0
 const JUMP_VELOCITY := 5.6
+const NORMAL_FOV := 66.0
+# Right-click with the rifle zooms in roughly 2x.
+const RIFLE_AIM_FOV := 30.0
 const JUMP_STAMINA := 6.0
 # Ground speed (m/s) at which each locomotion clip plays at 1x, measured from the
 # planted foot of the Mixamo source clip.
@@ -60,6 +63,8 @@ var aim_target := Vector3.ZERO
 var backwards := false
 var hp := 100.0
 var bleeding := false
+# Seconds of bleeding left; a wound clots on its own when it runs out (or a bandage stops it).
+var bleed_time := 0.0
 var alive := true
 
 
@@ -111,7 +116,7 @@ func create_camera() -> void:
 	arm.add_excluded_object(get_rid())
 	pivot.add_child(arm)
 	camera = Camera3D.new()
-	camera.fov = 66.0
+	camera.fov = NORMAL_FOV
 	camera.near = 0.08
 	camera.far = 140.0
 	camera.current = true
@@ -130,8 +135,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not active:
 		return
 	if event is InputEventMouseMotion and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
-		yaw -= event.relative.x * 0.0025
-		pitch = clampf(pitch - event.relative.y * 0.0025, -0.75, 0.5)
+		# Slower look while zoomed in, so the scope moves as far on screen as normal.
+		var look := 0.0025 * camera.fov / NORMAL_FOV
+		yaw -= event.relative.x * look
+		pitch = clampf(pitch - event.relative.y * look, -0.75, 0.5)
 	if event.is_action_pressed("flashlight"):
 		light.visible = not light.visible
 	if event.is_action_pressed("crouch"):
@@ -166,6 +173,12 @@ func has_headroom(which: String) -> bool:
 	query.transform = Transform3D(Basis.IDENTITY, global_position + Vector3(0, STANCE_HEIGHT[which] / 2.0 + 0.1, 0))
 	query.exclude = [get_rid()]
 	return get_world_3d().direct_space_state.intersect_shape(query, 1).is_empty()
+
+
+func target_fov(ground_speed: float) -> float:
+	if aim_mode() and weapon == "rifle":
+		return RIFLE_AIM_FOV
+	return 72.0 if sprinting and ground_speed > 0.5 else NORMAL_FOV
 
 
 func aim_mode() -> bool:
@@ -249,7 +262,9 @@ func _physics_process(delta: float) -> void:
 	camera_height = lerpf(camera_height, STANCE_CAMERA[stance], minf(1.0, delta * 8.0))
 	pivot.rotation = Vector3(pitch, yaw, 0.0)
 	update_camera_collision()
-	camera.fov = lerpf(camera.fov, 72.0 if sprinting and ground_speed > 0.5 else 66.0, delta * 4.0)
+	# The scope zooms in and out quickly; the sprint widening eases in slowly.
+	var zoom_rate := 10.0 if aim_mode() or camera.fov < NORMAL_FOV - 1.0 else 4.0
+	camera.fov = lerpf(camera.fov, target_fov(ground_speed), minf(1.0, delta * zoom_rate))
 	visual.visible = arm.get_hit_length() > 0.65
 	if position.y < -8.0:
 		position = Vector3(0.0, 0.5, 15.0)

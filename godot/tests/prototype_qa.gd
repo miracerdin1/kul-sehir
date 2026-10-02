@@ -121,6 +121,7 @@ func run(game: Node3D) -> void:
 	check(game.low_quality and game.get_viewport().msaa_3d == Viewport.MSAA_DISABLED, "Performance preset applies")
 	await check_city(game)
 	await preload("res://tests/houses_qa.gd").new().run(game, self)
+	await preload("res://tests/aim_bleed_qa.gd").new().run(game, self)
 	await check_combat(game)
 	game.ambient.stop()
 	game.player.footstep.stop()

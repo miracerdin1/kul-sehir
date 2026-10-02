@@ -355,8 +355,7 @@ func shoot(distance: float) -> void:
 		var damage := rng.randf_range(7.0, 12.0) if weapon == "rifle" else rng.randf_range(6.0, 10.0)
 		director.hurt_player(damage, "Düşman ateşi", global_position)
 		if rng.randf() < 0.28 and not player.bleeding:
-			player.bleeding = true
-			director.say("Kanaman var. Sargı sar (H).")
+			director.start_bleeding()
 	else:
 		target += Vector3(rng.randf_range(-1.8, 1.8), rng.randf_range(-0.8, 1.2), rng.randf_range(-1.8, 1.8))
 		director.tracer(muzzle, target)
