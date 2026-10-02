@@ -3,7 +3,10 @@ extends StaticBody3D
 
 signal shattered(at: Vector3)
 
-static var break_sound: AudioStreamWAV
+# Three takes of a synthesized pane breaking (tools/make_sounds.py), picked at random.
+const BREAK_SOUNDS := ["res://assets/audio/glass_break_1.ogg", "res://assets/audio/glass_break_2.ogg", "res://assets/audio/glass_break_3.ogg"]
+
+static var break_sounds: Array[AudioStream] = []
 static var shard_material: StandardMaterial3D
 
 var broken := false
@@ -43,7 +46,7 @@ func create_fragments(direction: Vector3) -> void:
 	get_tree().current_scene.add_child(effect)
 	effect.global_transform = global_transform
 	var particles := CPUParticles3D.new()
-	particles.amount = 18
+	particles.amount = 30
 	particles.lifetime = 0.85
 	particles.one_shot = true
 	particles.explosiveness = 1.0
@@ -69,29 +72,17 @@ func create_fragments(direction: Vector3) -> void:
 	particles.emitting = true
 	var sound := AudioStreamPlayer3D.new()
 	sound.stream = glass_sound()
-	sound.volume_db = -12.0
-	sound.max_distance = 24.0
+	sound.volume_db = -4.0
+	sound.unit_size = 6.0
+	sound.max_distance = 45.0
+	sound.pitch_scale = randf_range(0.9, 1.12)
 	effect.add_child(sound)
 	sound.play()
-	get_tree().create_timer(1.2).timeout.connect(effect.queue_free)
+	get_tree().create_timer(1.4).timeout.connect(effect.queue_free)
 
 
-static func glass_sound() -> AudioStreamWAV:
-	if break_sound != null:
-		return break_sound
-	var sample_rate := 22050
-	var count := int(sample_rate * 0.38)
-	var bytes := PackedByteArray()
-	bytes.resize(count * 2)
-	var random := RandomNumberGenerator.new()
-	random.seed = 718
-	for index in range(count):
-		var time := float(index) / sample_rate
-		var noise := random.randf_range(-1.0, 1.0) * exp(-time * 20.0)
-		var ring := (sin(time * 17800.0) + sin(time * 24300.0)) * 0.18 * exp(-time * 12.0)
-		bytes.encode_s16(index * 2, int(clampf(noise + ring, -1.0, 1.0) * 22000.0))
-	break_sound = AudioStreamWAV.new()
-	break_sound.format = AudioStreamWAV.FORMAT_16_BITS
-	break_sound.mix_rate = sample_rate
-	break_sound.data = bytes
-	return break_sound
+static func glass_sound() -> AudioStream:
+	if break_sounds.is_empty():
+		for path in BREAK_SOUNDS:
+			break_sounds.append(load(path))
+	return break_sounds.pick_random()

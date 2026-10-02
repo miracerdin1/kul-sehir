@@ -29,6 +29,11 @@ const LAND_TIME := 0.35
 const STANCE_HEIGHT := {"stand": 1.75, "crouch": 1.2, "prone": 0.6}
 const STANCE_CAMERA := {"stand": 1.5, "crouch": 1.05, "prone": 0.6}
 const CAPSULE_RADIUS := 0.28
+# Vaulting: Space in front of a low wall, sill or broken window swings the body over it
+# instead of hopping into it. Heights are above the feet.
+const VAULT_MIN := 0.45
+const VAULT_MAX := 1.35
+const VAULT_REACH := 1.1
 
 var active := false
 var stamina := 100.0
@@ -66,6 +71,11 @@ var bleeding := false
 # Seconds of bleeding left; a wound clots on its own when it runs out (or a bandage stops it).
 var bleed_time := 0.0
 var alive := true
+# Vault path: start, the point over the obstacle, landing; vault_time < 0 when not vaulting.
+var vault_time := -1.0
+var vault_length := 0.0
+var vault_points: Array[Vector3] = []
+var vault_side := 1.0
 
 
 func _ready() -> void:
@@ -186,6 +196,8 @@ func aim_mode() -> bool:
 
 
 func die() -> void:
+	if vaulting():
+		end_vault()
 	alive = false
 	active = false
 	velocity = Vector3.ZERO
@@ -206,6 +218,10 @@ func _physics_process(delta: float) -> void:
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	# A one-off action such as picking something up roots the character in place.
 	action_time = maxf(0.0, action_time - delta)
+	if vault_time >= 0.0:
+		advance_vault(delta)
+		follow_camera(0.0, delta)
+		return
 	if action_time > 0.0:
 		input = Vector2.ZERO
 	var direction := Basis(Vector3.UP, yaw) * Vector3(input.x, 0.0, input.y)
@@ -227,6 +243,8 @@ func _physics_process(delta: float) -> void:
 	if Input.is_action_just_pressed("jump") and is_on_floor() and action_time <= 0.0:
 		if stance != "stand":
 			set_stance("stand")
+		elif stamina >= JUMP_STAMINA and start_vault():
+			return
 		elif stamina >= JUMP_STAMINA:
 			velocity.y = JUMP_VELOCITY
 			stamina -= JUMP_STAMINA
@@ -259,6 +277,10 @@ func _physics_process(delta: float) -> void:
 	if armed and armed.rig:
 		animation.advance(delta)
 		armed.update(delta, aim_mode(), aim_target)
+	follow_camera(ground_speed, delta)
+
+
+func follow_camera(ground_speed: float, delta: float) -> void:
 	camera_height = lerpf(camera_height, STANCE_CAMERA[stance], minf(1.0, delta * 8.0))
 	pivot.rotation = Vector3(pitch, yaw, 0.0)
 	update_camera_collision()
@@ -269,6 +291,125 @@ func _physics_process(delta: float) -> void:
 	if position.y < -8.0:
 		position = Vector3(0.0, 0.5, 15.0)
 		velocity = Vector3.ZERO
+
+
+# Finds a vaultable obstacle straight ahead (the way the camera looks): something hit at
+# knee height within reach, a top between VAULT_MIN and VAULT_MAX, open air above that
+# top (no glass, no wall) and floor with room for the body on the far side.
+func find_vault() -> Array[Vector3]:
+	var none: Array[Vector3] = []
+	var space := get_world_3d().direct_space_state
+	var forward := Basis(Vector3.UP, yaw) * Vector3.FORWARD
+	var feet := global_position
+	var exclude := [get_rid()]
+	var front := ray(space, feet + Vector3.UP * 0.6, feet + Vector3.UP * 0.6 + forward * (VAULT_REACH + CAPSULE_RADIUS), exclude)
+	if front.is_empty() or absf(front.normal.y) > 0.4:
+		return none
+	var near: float = (front.position - feet).dot(forward)
+	var probe := feet + forward * (near + 0.12)
+	var top := ray(space, probe + Vector3.UP * (VAULT_MAX + 0.6), probe + Vector3.UP * 0.3, exclude)
+	if top.is_empty():
+		return none
+	var height: float = top.position.y - feet.y
+	if height < VAULT_MIN or height > VAULT_MAX:
+		return none
+	# Room for the tucked body over the top: no glass, wall or window head in the way.
+	for lift: float in [0.35, 0.8]:
+		var over := feet + Vector3.UP * (height + lift)
+		if not ray(space, over, over + forward * (near + 1.4), exclude).is_empty():
+			return none
+	var landing := Vector3.INF
+	for step in range(1, 9):
+		var across := feet + forward * (near + 0.12 + step * 0.18)
+		var below := ray(space, across + Vector3.UP * (height + 0.3), across + Vector3.DOWN * 1.2, exclude)
+		if below.is_empty() or below.position.y < feet.y + height - 0.3:
+			var spot := feet + forward * (near + 0.12 + step * 0.18 + CAPSULE_RADIUS + 0.25)
+			var ground := ray(space, spot + Vector3.UP * (height + 0.3), spot + Vector3.DOWN * 1.5, exclude)
+			if ground.is_empty():
+				return none
+			landing = ground.position
+			break
+	if landing == Vector3.INF:
+		return none
+	var body := PhysicsShapeQueryParameters3D.new()
+	body.shape = capsule
+	body.transform = Transform3D(Basis.IDENTITY, landing + Vector3.UP * (STANCE_HEIGHT.stand / 2.0 + 0.05))
+	body.exclude = exclude
+	if not space.intersect_shape(body, 1).is_empty():
+		return none
+	var over_top := feet + forward * (near + 0.2) + Vector3.UP * (height + 0.12)
+	var path: Array[Vector3] = [feet, over_top, landing]
+	return path
+
+
+func ray(space: PhysicsDirectSpaceState3D, from: Vector3, to: Vector3, exclude: Array) -> Dictionary:
+	var query := PhysicsRayQueryParameters3D.create(from, to)
+	query.exclude = exclude
+	return space.intersect_ray(query)
+
+
+func start_vault() -> bool:
+	if aim_mode() or action_time > 0.0:
+		return false
+	var path := find_vault()
+	if path.is_empty():
+		return false
+	vault_points = path
+	vault_length = 0.42 + 0.12 * path[0].distance_to(path[2])
+	vault_time = 0.0
+	vault_side = -1.0 if randf() < 0.5 else 1.0
+	stamina -= JUMP_STAMINA
+	collision.disabled = true
+	velocity = Vector3.ZERO
+	var across := path[2] - path[0]
+	visual.rotation.y = atan2(across.x, across.z)
+	play_action("JumpAir", vault_length)
+	return true
+
+
+# Hands on the top, hips up and over, legs swung to one side, then down on the far side.
+func advance_vault(delta: float) -> void:
+	vault_time += delta
+	var t := minf(1.0, vault_time / vault_length)
+	var start := vault_points[0]
+	var over := vault_points[1]
+	var landing := vault_points[2]
+	# Quadratic curve whose apex passes just over the top.
+	var control := over * 2.0 - (start + landing) * 0.5 + Vector3.UP * 0.15
+	var eased := t * t * (3.0 - 2.0 * t) * 0.35 + t * 0.65
+	var a := start.lerp(control, eased)
+	var b := control.lerp(landing, eased)
+	global_position = a.lerp(b, eased)
+	var swing := sin(t * PI)
+	visual.rotation.x = 0.38 * swing
+	visual.rotation.z = 0.45 * swing * vault_side
+	visual.position.y = -0.25 * swing
+	if armed and armed.rig:
+		animation.advance(delta)
+		armed.update(delta, false, aim_target)
+	if t >= 1.0:
+		end_vault()
+
+
+func end_vault() -> void:
+	vault_time = -1.0
+	collision.disabled = false
+	visual.rotation.x = 0.0
+	visual.rotation.z = 0.0
+	visual.position.y = 0.0
+	action_time = 0.0
+	velocity = (vault_points[2] - vault_points[0]).normalized() * 1.5
+	velocity.y = 0.0
+	land_time = LAND_TIME * 0.6
+	motion = ""
+	if animation:
+		animation.speed_scale = 1.0
+	footstep.volume_db = -10.0
+	footstep.play()
+
+
+func vaulting() -> bool:
+	return vault_time >= 0.0
 
 
 # Unarmed, the body turns to where it walks. Aiming, the body faces the camera and the

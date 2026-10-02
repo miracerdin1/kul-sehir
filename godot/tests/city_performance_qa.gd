@@ -32,6 +32,7 @@ func run(game: Node3D) -> void:
 	await frames(game, 30)
 	game.start_game()
 	game.director.start()
+	game.drive_vehicles(true)
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	game.player.hp = 1.0e9
 	lines.append("Kul Sehir sehir performansi  ·  %s  ·  %s" % [RenderingServer.get_video_adapter_name(), Time.get_datetime_string_from_system()])

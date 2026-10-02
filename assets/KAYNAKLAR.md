@@ -4,6 +4,10 @@ Eklenen her dosya buraya yazılır. Lisansı belirsiz dosya depoya girmez.
 
 | Dosya yolu | Kaynak bağlantısı | Üretici | Lisans | Atıf şartı | Ekleyen | Tarih |
 | --- | --- | --- | --- | --- | --- | --- |
+| `godot/assets/audio/glass_break_1.ogg` (+ `.import`) | [Kaynak](../tools/make_sounds.py) | Kül Şehir / Claude ile sentezlendi | Özgün proje varlığı; harici kayıt kullanılmadı | Üçüncü taraf atıf şartı yok. | Claude | 2026-10-02 |
+| `godot/assets/audio/glass_break_2.ogg` (+ `.import`) | [Kaynak](../tools/make_sounds.py) | Kül Şehir / Claude ile sentezlendi | Özgün proje varlığı; harici kayıt kullanılmadı | Üçüncü taraf atıf şartı yok. | Claude | 2026-10-02 |
+| `godot/assets/audio/glass_break_3.ogg` (+ `.import`) | [Kaynak](../tools/make_sounds.py) | Kül Şehir / Claude ile sentezlendi | Özgün proje varlığı; harici kayıt kullanılmadı | Üçüncü taraf atıf şartı yok. | Claude | 2026-10-02 |
+| `godot/assets/audio/tank_engine.ogg` (+ `.import`) | [Kaynak](../tools/make_sounds.py) | Kül Şehir / Claude ile sentezlendi | Özgün proje varlığı; harici kayıt kullanılmadı | Üçüncü taraf atıf şartı yok. | Claude | 2026-10-02 |
 | `godot/assets/audio/footstep.wav` | [Kaynak](../tools/prepare_audio_fonts.py) | Kül Şehir / Codex ile sentezlendi | Özgün proje varlığı; harici kayıt kullanılmadı | Üçüncü taraf atıf şartı yok. | Codex | 2026-10-01 |
 | `godot/assets/audio/footstep.wav.import` | [Kaynak](../tools/prepare_audio_fonts.py) | Kül Şehir / Codex ile sentezlendi | Özgün proje varlığı; harici kayıt kullanılmadı | Godot içe aktarım ayarı; Üçüncü taraf atıf şartı yok. | Codex | 2026-10-01 |
 | `godot/assets/audio/wind.wav` | [Kaynak](../tools/prepare_audio_fonts.py) | Kül Şehir / Codex ile sentezlendi | Özgün proje varlığı; harici kayıt kullanılmadı | Üçüncü taraf atıf şartı yok. | Codex | 2026-10-01 |

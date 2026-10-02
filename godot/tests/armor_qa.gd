@@ -58,7 +58,7 @@ func run(game: Node3D, qa: RefCounted) -> void:
 	var shielded := Vehicle.new()
 	game.add_child(shielded)
 	shielded.position = Vector3(0, 0, 110)
-	var wall := AssetFactory.collider(game, Vector3(10, 5, 0.3), Vector3(0, 2, 106.8))
+	var wall := AssetFactory.collider(game, Vector3(10, 5, 0.3), Vector3(0, 2, 105.9))
 	await qa.frames(game, 3)
 	service.explode(Vector3(0, 1.2, 105), 320, 6)
 	qa.check(shielded.hp == 280.0, "Solid wall blocks blast damage")
