@@ -599,9 +599,12 @@ func create_street_props() -> void:
 		var at: Vector3 = ARMOR_POSITIONS[index]
 		var vehicle := ArmoredVehicle.new()
 		vehicle.kind = "tank" if index % 2 == 0 else "apc"
-		add_child(vehicle)
+		# Placed before it enters the world, so its physics body starts here too.
 		vehicle.position = at
 		vehicle.rotation.y = PI / 2.0 if index == 3 else 0.0
+		add_child(vehicle)
+		# They patrol the roads from here.
+		vehicle.setup(self)
 		loot.append(["ammo762", rng.randi_range(10, 20), at + Vector3(rng.randf_range(-4, 4), 0.02, 4.5)])
 	# Spread over the whole map, so this mesh has no view range.
 	meshes.append_array(batch.commit(chunk, 0.0))

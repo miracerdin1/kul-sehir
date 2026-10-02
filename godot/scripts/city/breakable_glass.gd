@@ -69,29 +69,18 @@ func create_fragments(direction: Vector3) -> void:
 	particles.emitting = true
 	var sound := AudioStreamPlayer3D.new()
 	sound.stream = glass_sound()
-	sound.volume_db = -12.0
-	sound.max_distance = 24.0
+	sound.volume_db = -3.0
+	sound.unit_size = 4.0
+	sound.max_distance = 40.0
+	# Each pane sounds a little different.
+	sound.pitch_scale = randf_range(0.9, 1.1)
 	effect.add_child(sound)
 	sound.play()
-	get_tree().create_timer(1.2).timeout.connect(effect.queue_free)
+	get_tree().create_timer(1.5).timeout.connect(effect.queue_free)
 
 
+# Crack, ring, shards and settling pieces, made by tools/make_glass_sound.py.
 static func glass_sound() -> AudioStreamWAV:
-	if break_sound != null:
-		return break_sound
-	var sample_rate := 22050
-	var count := int(sample_rate * 0.38)
-	var bytes := PackedByteArray()
-	bytes.resize(count * 2)
-	var random := RandomNumberGenerator.new()
-	random.seed = 718
-	for index in range(count):
-		var time := float(index) / sample_rate
-		var noise := random.randf_range(-1.0, 1.0) * exp(-time * 20.0)
-		var ring := (sin(time * 17800.0) + sin(time * 24300.0)) * 0.18 * exp(-time * 12.0)
-		bytes.encode_s16(index * 2, int(clampf(noise + ring, -1.0, 1.0) * 22000.0))
-	break_sound = AudioStreamWAV.new()
-	break_sound.format = AudioStreamWAV.FORMAT_16_BITS
-	break_sound.mix_rate = sample_rate
-	break_sound.data = bytes
+	if break_sound == null:
+		break_sound = load("res://assets/audio/glass_break.wav")
 	return break_sound

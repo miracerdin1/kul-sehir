@@ -7,7 +7,7 @@ const InputBindings = preload("res://scripts/input_bindings.gd")
 const CombatDirector = preload("res://scripts/combat/combat_director.gd")
 const CityBuilder = preload("res://scripts/city/city_builder.gd")
 const CityMap = preload("res://scripts/city/city_map.gd")
-const PICKUP_TIME := 1.3
+const PICKUP_TIME := 0.7
 
 var street: Node3D
 var city: Node3D
@@ -200,6 +200,8 @@ func find_interaction() -> void:
 		return
 	can_use_stove =player.position.distance_to(street.stove_position) < 2.2 and has_line_of_sight(street.stove_position + Vector3(0, 1.2, 0))
 	hud.prompt.text = "[ E ]   " + ("Hazırlığı tamamla" if inventory.size() == 3 and not completed else "Sobanın yanında ısın") if can_use_stove else ""
+	if hud.prompt.text == "" and not player.busy() and not player.find_vault().is_empty():
+		hud.prompt.text = "[ BOŞLUK ]   Üstünden atla"
 
 
 func has_line_of_sight(target: Vector3, ignore: Node = null) -> bool:

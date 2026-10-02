@@ -32,6 +32,15 @@ func run(game: Node3D) -> void:
 	if "--capture-qa" in OS.get_cmdline_user_args():
 		await capture(game)
 		return
+	if "--movement-only" in OS.get_cmdline_user_args():
+		game.start_game()
+		await preload("res://tests/movement_qa.gd").new().run(game, self)
+		if "--capture-movement" in OS.get_cmdline_user_args():
+			DirAccess.make_dir_recursive_absolute("res://qa-output")
+			await preload("res://tests/movement_qa.gd").new().capture(game, self)
+		print("MOVEMENT QA RESULT: %d failures" % failures.size())
+		game.get_tree().quit(0 if failures.is_empty() else 1)
+		return
 	if "--houses-only" in OS.get_cmdline_user_args():
 		game.start_game()
 		game.toggle_quality()
@@ -131,6 +140,7 @@ func run(game: Node3D) -> void:
 	await check_city(game)
 	await preload("res://tests/houses_qa.gd").new().run(game, self)
 	await preload("res://tests/aim_bleed_qa.gd").new().run(game, self)
+	await preload("res://tests/movement_qa.gd").new().run(game, self)
 	await check_combat(game)
 	game.ambient.stop()
 	game.player.footstep.stop()

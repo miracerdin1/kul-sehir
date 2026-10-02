@@ -29,6 +29,11 @@ const LAND_TIME := 0.35
 const STANCE_HEIGHT := {"stand": 1.75, "crouch": 1.2, "prone": 0.6}
 const STANCE_CAMERA := {"stand": 1.5, "crouch": 1.05, "prone": 0.6}
 const CAPSULE_RADIUS := 0.28
+# Vaulting a sill, low wall or sandbags: Space in front of a ledge between these heights.
+const VAULT_TIME := 1.15
+const VAULT_LOW := 0.45
+const VAULT_HIGH := 1.3
+const VAULT_REACH := 1.0
 
 var active := false
 var stamina := 100.0
@@ -66,6 +71,8 @@ var bleeding := false
 # Seconds of bleeding left; a wound clots on its own when it runs out (or a bandage stops it).
 var bleed_time := 0.0
 var alive := true
+# The vault in progress: {from, to, ledge, glass, time}; empty when not vaulting.
+var vault := {}
 
 
 func _ready() -> void:
@@ -203,6 +210,9 @@ func _physics_process(delta: float) -> void:
 			animation.advance(delta)
 			armed.update(delta, false, aim_target)
 		return
+	if not vault.is_empty():
+		update_vault(delta)
+		return
 	var input := Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	# A one-off action such as picking something up roots the character in place.
 	action_time = maxf(0.0, action_time - delta)
@@ -225,6 +235,10 @@ func _physics_process(delta: float) -> void:
 	if not is_on_floor():
 		velocity.y -= GRAVITY * delta
 	if Input.is_action_just_pressed("jump") and is_on_floor() and action_time <= 0.0:
+		var ledge := find_vault()
+		if not ledge.is_empty() and stamina >= JUMP_STAMINA:
+			start_vault(ledge)
+			return
 		if stance != "stand":
 			set_stance("stand")
 		elif stamina >= JUMP_STAMINA:
@@ -269,6 +283,108 @@ func _physics_process(delta: float) -> void:
 	if position.y < -8.0:
 		position = Vector3(0.0, 0.5, 15.0)
 		velocity = Vector3.ZERO
+
+
+# A ledge straight ahead of the camera that can be vaulted: a window sill, a low
+# wall or sandbags with room to land on the far side at about the same height.
+# Returns {from, to, ledge, glass}, or an empty dictionary.
+func find_vault() -> Dictionary:
+	if stance != "stand" or not is_on_floor() or not alive:
+		return {}
+	var space := get_world_3d().direct_space_state
+	var forward := Basis(Vector3.UP, yaw) * Vector3.FORWARD
+	var low := global_position + Vector3(0, 0.4, 0)
+	var query := PhysicsRayQueryParameters3D.create(low, low + forward * (VAULT_REACH + CAPSULE_RADIUS))
+	query.exclude = [get_rid()]
+	var face := space.intersect_ray(query)
+	if face.is_empty() or absf(face.normal.y) > 0.3:
+		return {}
+	var across := Vector3(-face.normal.x, 0, -face.normal.z).normalized()
+	# The top of the ledge, a little way into it.
+	var probe: Vector3 = face.position + across * 0.15
+	query = PhysicsRayQueryParameters3D.create(Vector3(probe.x, global_position.y + VAULT_HIGH + 0.15, probe.z), Vector3(probe.x, global_position.y + 0.2, probe.z))
+	query.exclude = [get_rid()]
+	var top := space.intersect_ray(query)
+	if top.is_empty():
+		return {}
+	var height: float = top.position.y - global_position.y
+	if height < VAULT_LOW or height > VAULT_HIGH:
+		return {}
+	# Room above the ledge for the body; intact glass gets smashed on the way through.
+	var glass: Node = null
+	var exclude := [get_rid()]
+	for lift in [0.5, 1.0]:
+		var from := global_position + Vector3(0, height + lift, 0)
+		var reach := from.distance_to(Vector3(face.position.x, from.y, face.position.z)) + 1.2
+		for attempt in 2:
+			query = PhysicsRayQueryParameters3D.create(from, from + across * reach)
+			query.exclude = exclude
+			var hit := space.intersect_ray(query)
+			if hit.is_empty():
+				break
+			if hit.collider.is_in_group("breakable_glass") and not hit.collider.broken:
+				glass = hit.collider
+				exclude.append(hit.collider.get_rid())
+				continue
+			return {}
+	# Land just past the ledge, on ground at about the starting height.
+	for distance in [0.95, 1.35]:
+		var spot: Vector3 = face.position + across * distance
+		query = PhysicsRayQueryParameters3D.create(Vector3(spot.x, global_position.y + height + 0.4, spot.z), Vector3(spot.x, global_position.y - 0.7, spot.z))
+		query.exclude = exclude
+		var ground := space.intersect_ray(query)
+		if ground.is_empty() or absf(ground.position.y - global_position.y) > 0.45:
+			continue
+		var body := PhysicsShapeQueryParameters3D.new()
+		body.shape = capsule
+		body.transform = Transform3D(Basis.IDENTITY, ground.position + collision.position + Vector3(0, 0.05, 0))
+		body.exclude = exclude
+		if not space.intersect_shape(body, 1).is_empty():
+			continue
+		var start: Vector3 = face.position - across * (CAPSULE_RADIUS + 0.12)
+		start.y = global_position.y
+		return {"from": start, "to": ground.position, "ledge": height, "glass": glass, "across": across}
+	return {}
+
+
+func start_vault(ledge: Dictionary) -> void:
+	vault = ledge
+	vault.time = 0.0
+	vault.origin = global_position
+	velocity = Vector3.ZERO
+	stamina -= JUMP_STAMINA
+	collision.disabled = true
+	visual.rotation.y = atan2(ledge.across.x, ledge.across.z)
+	play_action("Vault", VAULT_TIME)
+	if ledge.glass:
+		ledge.glass.shatter(ledge.across)
+
+
+# The clip lifts the body over the ledge; here the character is carried across:
+# a short step to the wall, the swing over, then the landing.
+func update_vault(delta: float) -> void:
+	vault.time += delta
+	var progress := clampf(vault.time / VAULT_TIME, 0.0, 1.0)
+	var approach := smoothstep(0.0, 0.25, progress)
+	var swing := smoothstep(0.3, 0.85, progress)
+	var start: Vector3 = vault.origin.lerp(vault.from, approach)
+	global_position = start.lerp(vault.to, swing)
+	camera_height = STANCE_CAMERA.stand + sin(progress * PI) * minf(0.5, vault.ledge * 0.45)
+	if armed and armed.rig:
+		animation.advance(delta)
+		armed.update(delta, false, aim_target)
+	pivot.rotation = Vector3(pitch, yaw, 0.0)
+	update_camera_collision()
+	if progress >= 1.0:
+		global_position = vault.to
+		collision.disabled = false
+		vault = {}
+		action_time = 0.0
+		velocity = Vector3.ZERO
+
+
+func vaulting() -> bool:
+	return not vault.is_empty()
 
 
 # Unarmed, the body turns to where it walks. Aiming, the body faces the camera and the
