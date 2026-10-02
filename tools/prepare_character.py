@@ -38,6 +38,10 @@ CLIPS = (
     ("Stabbing", "Strike", {"start": 0.10, "end": 0.80}),
     # Falls backwards and stays down.
     ("Death", "Death", {"start": 0.30, "end": 3.00}),
+    # Wall vault: last step in, hand on the ledge at 0.45 s, legs over at 0.85 s, landed
+    # at 1.3 s. The hips keep their lift (the clip carries the body over a 0.95 m sill);
+    # survivor.gd moves the character across and adjusts for other heights.
+    ("Jumping_Over_Into_Combat", "Vault", {"start": 1.35, "end": 2.75}),
 )
 
 

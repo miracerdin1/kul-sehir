@@ -2,6 +2,12 @@
 
 Yeni kayıt en üste. Şablon `ORTAK_KURALLAR.md` §3'te.
 
+## 2026-10-02 — Claude — dal: claude/gercek-atlama
+Yapılan: Miraç'ın isteğiyle yarım kalan yerel işlerden işe yarayan parça main'e taşındı: pencereden/alçak duvardan atlama artık gerçek bir Mixamo duvar atlama klibiyle oynuyor ("Jumping_Over_Into_Combat" 1.35–2.75 sn → `Vault`: el pervaza, bacaklar üstten savrulur, öbür tarafa iniş). PR #16'nın engel bulma ve iniş noktası mantığı aynen duruyor; klip varsa beden klibin kaldırışıyla taşınıyor ve engel yüksekliği klibin 0.95 m'lik pervazından farklıysa bu fark kadar yukarı/aşağı kaydırılıyor (0.95 sn). Klip yoksa (eski survivor.glb) PR #16'daki zıplama pozu + eğilme yedek olarak çalışıyor. Paralel yapılan iki yarım iş yedek dal olarak GitHub'da: `claude/arac-tirmanma-yedek` ve `claude/asker-ses-tank-yedek` (birleştirilmeyecek).
+Değişen dosyalar: `tools/prepare_character.py`, `godot/assets/characters/survivor.credits.json`, `godot/scripts/survivor.gd`, `docs/GUNLUK.md`.
+Test edilen / edilmeyen: Miraç'ın bilgisayarında (MX450) `--smoke-test` 0 hata (PR #16'nın atlama kontrolleri dahil), `--armor-only` 0 hata (aynı kod üzerinde bir önceki çalıştırmada "RPG reload takes a reserve rocket" bir kez düştü, bu değişiklikle ilgisiz; ara sıra düşen bir test gibi). Kırık sokak penceresinden atlama görüntüyle kontrol edildi.
+Açık kalan / diğer ajana not: Her makinede bir kez `python tools/prepare_character.py` çalıştırılmalı (yeni `Vault` klibi; survivor.glb Git dışında).
+
 ## 2026-10-02 — Claude — dal: claude/smoke-duzelt
 Yapılan: PR #18 sonrası main'de `--smoke-test` 2-3 hata veriyordu. (1) "Soldier patrols along a road": yeni doğan asker %35 olasılıkla ilk hedef olarak bir ev seçebiliyordu; artık doğduktan sonraki ilk devriye ayağı hep yolda, ev aramaları ikinci ayaktan başlıyor (`enemy.gd`, `legs`). (2) "A soldier facing the survivor in daylight spots him" ve "A soldier in combat wounds the survivor": yeni testler testi uzattığı için oyun saati bu kontrole geldiğinde geceye dönüyordu (daylight 0.0); test artık bu kontrolden önce saati öğlene alıyor (`prototype_qa.gd`).
 Değişen dosyalar: `godot/scripts/combat/enemy.gd`, `godot/tests/prototype_qa.gd`, `docs/GUNLUK.md`.
