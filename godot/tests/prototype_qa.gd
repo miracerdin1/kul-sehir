@@ -412,6 +412,11 @@ func check_combat(game: Node3D) -> void:
 	check(listener.state == "investigate", "Gunfire within earshot sends a soldier to investigate")
 	player.position = Vector3(0, 0.2, 8)
 	player.velocity = Vector3.ZERO
+	# The tests before this one take long enough to reach nightfall; spotting needs day.
+	var climate_state = game.street.climate.state
+	climate_state.elapsed_days = floorf(climate_state.elapsed_days) + 12.0 / 24.0
+	climate_state.set_weather("cloudy", true)
+	await frames(game, 2)
 	var watcher = director.spawn_enemy(Vector3(2.0, 0.1, -4.0), "rifle")
 	await frames(game, 3)
 	watcher.visual.rotation.y = 0.0
